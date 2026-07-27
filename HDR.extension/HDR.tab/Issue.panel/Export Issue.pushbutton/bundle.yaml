@@ -1,0 +1,7 @@
+title: Export\nIssue
+tooltip: >-
+  Create the export folder tree and write PDF / DWG / IFC / detached RVT for
+  every sheet on the chosen issue revision, named to the HDR convention.
+  Dry-run by default -- nothing is written until you approve the review table.
+author: HDR
+highlight: new
