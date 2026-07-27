@@ -17,8 +17,8 @@ This document designs that script, and only that script, against the four-phase 
 Ryann supplied. Everything about the wider HDR suite is deferred to §11.
 
 **Job to be done (practitioner's voice):**
-> "At issue time, put every sheet on this revision into the right folder, named to our
-> standard, with the previous issue archived — without me clicking Print 80 times."
+> "At issue time, put every sheet in this series out at its current revision, into the right
+> folder, named to our standard — without me clicking Print 80 times."
 
 ---
 
@@ -56,9 +56,9 @@ Mapping Ryann's phases onto the AECFlow stage model:
 ```
 EXTRACT [D]          PROPOSE [D]           RESOLVE [D]        CHECK [D]         COMMIT [D]
 ──────────────       ──────────────        ──────────────     ──────────────    ──────────────
-Project info         Select sheets on      Bind sheet UIDs    8 rules over      Create folders
-Sheet list           the issue revision    Build full paths   (Snapshot,        Document.Export
-Revision table       Compute filenames     Coerce export      ChangeSet)        SaveAs detached
+Project info         Select sheets in      Bind sheet UIDs    8 rules over      Create folders
+Sheet list           the chosen series,    Build full paths   (Snapshot,        Document.Export
+Revision table       each at its own       Coerce export      ChangeSet)        SaveAs detached
 Existing exports     Decide folder tree    options                              Write audit
 on disk
       │                     │                     │                 │                 │
@@ -184,7 +184,7 @@ Pure functions over `(Snapshot, ChangeSet)`. One per file in `lib/aecflow/rules/
 | R5 | Sanitised filename contains no illegal characters and is non-empty | **block** |
 | R6 | Export root exists, is writable, and is not a disconnected UNC path | **block** |
 | R7 | Sheet is not a placeholder and has at least one placed view | **warn** |
-| R8 | All exported sheets carry the same issue revision | **warn** |
+| R8 | Every sheet in the series has at least one revision to name the file with | **warn** |
 
 R4 is not theoretical. HDR project paths on network drives are deep, and `12345-A101-RevP04.pdf`
 plus a nested `Exports/PDF/` eats the budget quickly. Failing at Check with a clear message
@@ -200,7 +200,7 @@ Default policy per the pipeline context: any `block` blocks the whole set. No pa
 
 ## 7. Human-in-the-loop gates
 
-**G1 — Scope.** Before Extract. A dialog confirming: the issue revision to export, which
+**G1 — Scope.** Before Extract. A dialog confirming: the **sheet series** to export, which
 formats are enabled (PDF/DWG/IFC/RVT checkboxes), and the resolved export root. Shows the
 sheet count that will be affected. This prevents an accidental whole-project export.
 
@@ -210,7 +210,12 @@ sheet count that will be affected. This prevents an accidental whole-project exp
 |---|---|---|---|---|---|---|
 | ☑ | A101 | Ground Floor Plan | P04 | PDF | `…/Exports/PDF/12345-A101-RevP04.pdf` | pass |
 | ☑ | A102 | First Floor Plan | P04 | PDF | `…/Exports/PDF/12345-A102-RevP04.pdf` | pass |
-| ☐ | A103 | Roof Plan | P03 | PDF | — | **warn** R8: not on issue revision |
+| ☑ | A103 | Roof Plan | P03 | PDF | `…/Exports/PDF/12345-A103-RevP03.pdf` | pass |
+| ☐ | A104 | Site Plan | — | PDF | — | **warn** R8: no revision on sheet |
+
+Note row A103. Under the per-sheet rule confirmed in §12, a sheet at an older revision than
+its neighbours is a **correct** export, not a warning — mixed revisions in one folder are the
+expected output. The revision column is what makes that legible at a glance.
 
 Sortable, per-row opt-out, warn rows visible and unchecked by default. Nothing writes
 without passing through this table. pyRevit's `forms.SelectFromList` with a custom template
@@ -309,6 +314,13 @@ merge into an existing archive folder); purge must be preceded by a successful s
 live central is never purged in place; no op may affect elements checked out by another user;
 `close_model` relinquishes.
 
+**Changed by Q2's answer.** Supersession is now per-sheet, not per-issue. With every sheet
+carrying its own revision, `12345-A101-RevP03.pdf` is superseded when `…-RevP04.pdf` appears,
+while `12345-A102-RevP03.pdf` beside it may still be current. Archive therefore has to compare
+each existing file against the incoming set sheet-by-sheet, rather than sweeping a whole
+previous issue. `naming.parse_export_filename()` already returns `(sheet_number, revision)`
+for exactly this.
+
 **Invariant 5 applies here.** Purge and audit-save-as open transactions and must assimilate
 into a single undo.
 
@@ -334,7 +346,7 @@ this tool. Two structural decisions made now that make it cheaper later:
 
 ## 12. Open questions — meeting agenda
 
-**Q1 — "Sheet creation": files or elements?** ⚠ *Highest impact*
+**Q1 — "Sheet creation": files or elements?** ⚠ *Highest impact — still open*
 The meeting notes say "sheet creation and printing", but the phase structure Ryann supplied
 contains no sheet-creation action — every one of the nine actions is export, archive, or
 housekeeping. Two readings:
@@ -347,21 +359,50 @@ one does not. It is also where an LLM PROPOSE stage would first earn its place.
 **Recommend confirming (a) for v1.** If (b) is wanted, it is a third tool, and we should scope
 it separately rather than fold it in.
 
-**Q2 — Revision selection rule.** ⚠ *Blocks M1*
-Ryann's example shows every sheet at `RevP04`, implying an *issue-based* selection: pick a
-revision, export the sheets on it. The alternative is *per-sheet latest*: export every sheet
-at whatever its own newest revision happens to be, producing mixed revisions in one folder.
-These give different answers on any real project. R8 currently warns on mixed revisions,
-which assumes issue-based. **Recommend issue-based, R8 stays a warn.**
+**Q2 — Revision selection rule.** ✅ *Answered 2026-07-27*
+**Per-sheet latest, scoped by sheet series.** Every sheet in the chosen series exports at its
+own current revision; the series defines the package, not the revision. Mixed revisions in one
+folder are therefore the expected and correct output.
+
+Consequences, all now applied:
+ - R8 no longer warns on mixed revisions. It warns when a sheet has *no* revision at all,
+   because there is then nothing to build a filename from (see Q9).
+ - G1 selects a series, not a revision.
+ - The Snapshot carries each sheet's series membership.
+ - Archiving becomes per-sheet supersession rather than per-issue, which changes
+   `Archive & Close` — noted in §10.
+
+This resolves the contradiction recorded in `docs/02-traceability.md` §3.4: "Action 2 - Export
+Sheets with Latest Revision" was the operative line; the uniform `RevP04` filenames were an
+artefact of the example.
 
 **Q3 — Naming separators.** Hyphens for sheets, underscores for models — deliberate or
 incidental? Where, if anywhere, do project name and discipline appear? (§5.1)
 
 **Q4 — Export root.** Sibling of the `.rvt`, fixed network path, or project parameter? (§5.2)
 
-**Q5 — PDF settings.** Colour vs. monochrome, raster quality, hide crop/scope boxes/ref
-planes, and — importantly — one PDF per sheet or one combined PDF for the set? Ryann's example
-filenames show per-sheet.
+**Q5 — PDF settings.** Partly answered 2026-07-27: **one PDF per sheet**, confirming the
+export strategy in ADR-003. Still open: colour vs. monochrome, raster quality, and whether to
+hide crop regions, scope boxes and reference planes.
+
+**Q9 — What is a "sheet series" in an HDR model?** ⚠ *New, blocks M1*
+Q2's answer introduces the concept but not its mechanism. Four candidates:
+ - **Sheet Collections** — native to Revit 2025, new in this release. Sheets are assigned to
+   flexible named groupings via a `Sheet Collection` parameter, and Revit's own Export/Print
+   dialog already exposes each collection as a filter toggle. Best fit for the term, and it
+   arrives in exactly the version we standardised on.
+ - **A print set** (`ViewSheetSet`) — the classic mechanism, works in every version, but is a
+   manually curated list that drifts out of date.
+ - **A custom shared parameter** on sheets, if HDR already has one.
+ - **Sheet number prefix** convention (`A1xx` = plans, `A2xx` = elevations).
+**Recommend Sheet Collections**, with print sets as a fallback for older models. We need to
+know which HDR projects actually use before Extract can be written.
+
+**Q10 — What happens to a sheet with no revision at all?** *New*
+Per-sheet-latest makes this reachable: a brand-new sheet in the series with an empty revision
+schedule has nothing to put in the `Rev{revision}` slot. Options are to skip it (current
+behaviour, R8 warn), export it with the token omitted, or block the run.
+**Recommend skip with a warning** — it is visible at G2 and the user can opt in.
 
 **Q6 — Archive trigger.** Archive on every run, or only when a prior issue at a different
 revision exists?

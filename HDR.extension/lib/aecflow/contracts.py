@@ -144,7 +144,13 @@ def make_snapshot(model, filesystem, captured_at):
       .project    {number, name, client, status}
       .revisions  [{uid, sequence, revision_number, date, description, issued}]
       .sheets     [{uid, number, name, is_placeholder, view_count,
-                    revision_uids, current_revision_uid, titleblock_size}]
+                    revision_uids, current_revision_uid, titleblock_size,
+                    series}]
+
+    'series' is the sheet's package membership -- the Sheet Collection in
+    Revit 2025, or a print set / shared parameter in a fallback model. It
+    scopes what an export run covers; each sheet then exports at its own
+    current revision, so one folder legitimately holds mixed revisions.
 
     filesystem  FsSnapshot -- read from disk. Archive decisions depend on
                 what is already there, so it belongs in the Snapshot too.

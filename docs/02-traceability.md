@@ -226,9 +226,16 @@ reads as *each sheet at its own latest revision*. But:
 shows every sheet carrying the *same* revision, which is issue-based selection. On any
 project where sheets have diverged, these produce different file sets.
 
-Q2 exists because the brief genuinely specifies both and the code must pick one. The design
-assumes issue-based, on the strength of the filename example, and rule R8 warns on mixed
-revisions so the assumption is visible at runtime rather than silent.
+Q2 existed because the brief genuinely specifies both and the code must pick one.
+
+**Resolved 2026-07-27 in Ryann's favour, against our recommendation.** The operative line is
+"Export Sheets with **Latest Revision**" — per-sheet latest. The uniform `RevP04` filenames
+were an artefact of the example, not a specification. A **sheet series** scopes the package
+instead, so the selection is "every sheet in this series, each at its own current revision".
+
+Mixed revisions in one folder are therefore correct output. R8 was inverted accordingly: it no
+longer warns on mixed revisions, it warns when a sheet has no revision at all. Our stated
+recommendation was wrong, and the design has been changed rather than the answer argued with.
 
 ---
 
