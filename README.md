@@ -3,9 +3,12 @@
 A pyRevit extension for HDR, built on the AECFlow pipeline architecture.
 **Revit 2025.**
 
-> **Status: design phase.** The design is agreed-in-draft and the scaffold is
-> real; the pipeline stage bodies land in M1. See
-> [`docs/01-design-issue-export.md`](docs/01-design-issue-export.md).
+> **Status: M1 built, unverified against Revit.** All five pipeline stages,
+> both rule sets, four op executors and three gates are implemented, with 86
+> tests passing without Revit. Nothing has yet been run inside Revit — the
+> export executors are written from the API documentation and are **unproven
+> until the spike in [ADR-003](docs/adr/ADR-003-one-export-call-per-file.md)
+> has run.** `DRY_RUN = True` is the default until then.
 
 ---
 
