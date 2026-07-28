@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# ! python3
 """Export probe -- answers every unverified assumption in the M1 build.
 
 WHAT IT DOES
@@ -6,9 +7,12 @@ WHAT IT DOES
     It does NOT modify the model, does not touch your project folders, and
     opens no transaction. Safe to run on a live workshared model.
 
-WHERE TO RUN IT
-    RevitPythonShell, or pyRevit's Python console. Paste the whole file and
-    run. Works under both IronPython 2.7 and CPython 3.
+HOW TO RUN IT
+    Click HDR tab > Dev > Probe Export. Output appears in the pyRevit window;
+    use its copy button to send the text back.
+
+    It also runs unchanged if pasted into RevitPythonShell, under either
+    IronPython 2.7 or CPython 3.
 
 WHAT TO SEND BACK
     All of the printed output. Every section is a question the code currently
