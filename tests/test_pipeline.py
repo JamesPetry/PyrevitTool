@@ -285,20 +285,32 @@ class TestInvariants(object):
                     filename, offenders)
             )
 
-    def test_the_lazy_imports_actually_exist(self):
-        """Guard against the previous test passing because nobody imports
-        Revit at all -- each executor must import it somewhere."""
+    # Executors that must reach the Revit API somewhere, lazily. Guards against
+    # the module-level test above passing simply because nobody imports Revit.
+    REVIT_EXECUTORS = ("export_sheet_pdf.py", "export_sheet_dwg.py",
+                       "export_model_ifc.py", "save_detached_rvt.py")
+
+    @pytest.mark.parametrize("filename", REVIT_EXECUTORS)
+    def test_revit_executors_do_import_revit_lazily(self, filename):
+        with open(os.path.join(self.LIB, "ops", filename)) as handle:
+            assert "Autodesk.Revit" in handle.read(), (
+                "{0} never imports Revit -- is it really an "
+                "executor?".format(filename)
+            )
+
+    def test_archive_file_needs_no_revit_at_all(self):
+        """archive_file moves files on disk and touches no model, which is why
+        its executor is fully unit-testable against a temp folder."""
+        with open(os.path.join(self.LIB, "ops", "archive_file.py")) as handle:
+            assert "Autodesk.Revit" not in handle.read()
+
+    def test_every_executor_is_registered(self):
+        from aecflow import ops as ops_pkg
         ops_dir = os.path.join(self.LIB, "ops")
-        executors = [f for f in os.listdir(ops_dir)
-                     if f.endswith(".py") and not f.startswith("_")
-                     and f != "__init__.py"]
-        assert len(executors) == 4
-        for filename in executors:
-            with open(os.path.join(ops_dir, filename)) as handle:
-                assert "Autodesk.Revit" in handle.read(), (
-                    "{0} never imports Revit -- is it really an "
-                    "executor?".format(filename)
-                )
+        modules = [f[:-3] for f in os.listdir(ops_dir)
+                   if f.endswith(".py") and not f.startswith("_")
+                   and f != "__init__.py"]
+        assert len(ops_pkg.REGISTRY) == len(modules)
 
     def test_every_op_kind_has_a_validator_and_an_executor(self):
         from aecflow import ops as ops_pkg

@@ -1,0 +1,8 @@
+title: Archive\nSuperseded
+tooltip: >-
+  Leaves Exports holding only the current revision of each sheet, moving
+  everything it supersedes into a dated Archive folder. Works out supersession
+  per sheet, so A101 moving to P04 does not disturb A102 still at P03. Files
+  are MOVED, never deleted, and only files matching the HDR naming convention
+  are touched. Nothing moves until you approve the review table.
+author: HDR

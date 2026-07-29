@@ -15,12 +15,14 @@ from aecflow.ops import export_sheet_pdf
 from aecflow.ops import export_sheet_dwg
 from aecflow.ops import export_model_ifc
 from aecflow.ops import save_detached_rvt
+from aecflow.ops import archive_file
 
 _MODULES = (
     export_sheet_pdf,
     export_sheet_dwg,
     export_model_ifc,
     save_detached_rvt,
+    archive_file,
 )
 
 REGISTRY = dict((m.KIND, m) for m in _MODULES)
