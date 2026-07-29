@@ -56,6 +56,10 @@ SEQUENCE_PREFIX = "P"
 SEQUENCE_START = 3
 SEQUENCE_DIGITS = 2
 
+# Collected API failures, printed at the end. Silent except-blocks are what
+# hid the numbering problem through two runs.
+DIAGNOSTICS = []
+
 
 def make_numbering_sequence(doc):
     """Create a P03/P04-style numbering sequence, or None if Revit refuses.
@@ -67,6 +71,10 @@ def make_numbering_sequence(doc):
     Returns the sequence's ElementId, or None. A failure here is not fatal:
     revisions still get Revit's default numbers and extract.py's sequence
     fallback keeps filenames valid, just less realistic.
+
+    Failures are collected into DIAGNOSTICS rather than swallowed. Two attempts
+    at this API have been refused silently; the exception text is what will
+    actually identify the problem.
     """
     # Reuse ours if a previous run already made it -- this button is expected
     # to be pressed more than once, and duplicate sequences accumulate.
@@ -74,20 +82,37 @@ def make_numbering_sequence(doc):
         for existing in FilteredElementCollector(doc).OfClass(
                 RevisionNumberingSequence):
             if existing.Name == SEQUENCE_NAME:
+                DIAGNOSTICS.append("reused existing sequence")
                 return existing.Id
-    except Exception:
-        pass
+    except Exception as error:
+        DIAGNOSTICS.append("collector failed: {0}: {1}".format(
+            type(error).__name__, error))
 
     try:
         settings = NumericRevisionSettings()
-        settings.Prefix = SEQUENCE_PREFIX
-        settings.StartNumber = SEQUENCE_START
-        settings.MinimumDigits = SEQUENCE_DIGITS
+    except Exception as error:
+        DIAGNOSTICS.append("NumericRevisionSettings() failed: {0}: {1}".format(
+            type(error).__name__, error))
+        return None
+
+    for attribute, value in (("Prefix", SEQUENCE_PREFIX),
+                             ("StartNumber", SEQUENCE_START),
+                             ("MinimumDigits", SEQUENCE_DIGITS)):
+        try:
+            setattr(settings, attribute, value)
+        except Exception as error:
+            DIAGNOSTICS.append("settings.{0} failed: {1}: {2}".format(
+                attribute, type(error).__name__, error))
+
+    try:
         sequence = RevisionNumberingSequence.CreateNumericSequence(
             doc, SEQUENCE_NAME, settings
         )
+        DIAGNOSTICS.append("created sequence {0}".format(SEQUENCE_NAME))
         return sequence.Id
-    except Exception:
+    except Exception as error:
+        DIAGNOSTICS.append("CreateNumericSequence failed: {0}: {1}".format(
+            type(error).__name__, error))
         return None
 
 
@@ -95,12 +120,20 @@ def apply_sequence(revision, sequence_id):
     """Point a revision at our numbering sequence. True if it took."""
     if sequence_id is None:
         return False
+    ok = True
     try:
         revision.NumberType = RevisionNumberType.Numeric
+    except Exception as error:
+        DIAGNOSTICS.append("NumberType failed: {0}: {1}".format(
+            type(error).__name__, error))
+        ok = False
+    try:
         revision.RevisionNumberingSequenceId = sequence_id
-        return True
-    except Exception:
-        return False
+    except Exception as error:
+        DIAGNOSTICS.append("RevisionNumberingSequenceId failed: {0}: {1}".format(
+            type(error).__name__, error))
+        ok = False
+    return ok
 
 
 def main():
@@ -191,6 +224,12 @@ def main():
     lines.append("")
     for number, which in report:
         lines.append("  {0:<10} {1}".format(number, which))
+
+    if DIAGNOSTICS:
+        lines.append("")
+        lines.append("Numbering diagnostics:")
+        for note in DIAGNOSTICS:
+            lines.append("  {0}".format(note))
 
     lines.append("")
     lines.append("Now run Probe Export to confirm, then Export Issue.")
