@@ -56,7 +56,16 @@ def prompt(doc, available_series, default_root, series_fallback=None):
         return None
     formats = [f for f in FORMATS if FORMAT_LABELS[f] in chosen_formats]
 
-    export_root = forms.pick_folder(title="Export to") or default_root
+    # pick_folder's signature has varied across pyRevit versions; fall back to
+    # the model's own folder rather than failing the run over a keyword.
+    try:
+        picked = forms.pick_folder(title="Export to")
+    except TypeError:
+        picked = forms.pick_folder()
+    except Exception:
+        picked = None
+
+    export_root = picked or default_root
     if not export_root:
         return None
 
