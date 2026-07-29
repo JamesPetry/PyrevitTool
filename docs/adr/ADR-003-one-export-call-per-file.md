@@ -56,21 +56,24 @@ unknown and may be significant.
 **Measured 2026-07-29.** Revit 2025 (25.4.60.9), Snowdon Towers sample model, 55 sheets,
 non-workshared, local disk.
 
-| Test | Result |
-|---|---|
-| One sheet, `Combine=true`, `FileName="12345-A100-RevP04"` | Produced exactly `12345-A100-RevP04.pdf` — **exact match** |
-| 10 sheets, one call each | 19.6 s |
-| 10 sheets, one batch call (`Combine=false`) | 16.0 s |
-| Ratio | Per-sheet **1.2× slower** |
-| Extrapolated to 64 sheets | ~126 s |
+| Test | Cold | Warm |
+|---|---|---|
+| One sheet, `Combine=true`, `FileName="12345-A100-RevP04"` | exact match, 5.2 s | exact match, 0.8 s |
+| 10 sheets, one call each | 19.6 s | 15.9 s |
+| 10 sheets, one batch call (`Combine=false`) | 16.0 s | 15.9 s |
+| Ratio | 1.2× slower | **1.0× — no measurable cost** |
+| Extrapolated to 64 sheets | ~126 s | ~101 s |
+
+The second run, with Revit's caches warm, shows per-sheet export costing **nothing at all**
+against a batch call. The 1.2× first measured was cold-start overhead, not per-call overhead.
 
 Names Revit chose for itself in batch mode: `Sheet-Fifth Floor Plan.pdf`,
 `Sheet-First Floor Plan.pdf`, `Sheet-Green Roof.pdf`. No project number, no sheet number, no
 revision — unusable, exactly as the documentation predicted.
 
-The decision holds comfortably. Per-sheet costs roughly 20% more wall time and buys correct
-filenames outright; two minutes for a 64-sheet issue is well inside what the progress bar
-makes tolerable. `DRY_RUN` was flipped to `False` on the strength of this.
+The decision holds outright. Per-sheet export buys exact filenames for no measurable
+throughput cost once caches are warm, and under two minutes for a 64-sheet issue in the worst
+case. `DRY_RUN` was flipped to `False` on the strength of this.
 
 **Fallback, now unnecessary.** Batch export then rename remains theoretically available —
 every destination path is known before the run begins, so the rename would be deterministic —

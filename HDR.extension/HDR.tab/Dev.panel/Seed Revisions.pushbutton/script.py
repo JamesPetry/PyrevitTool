@@ -31,8 +31,9 @@ UNDO
 """
 
 from Autodesk.Revit.DB import (
-    ElementId, FilteredElementCollector, Revision, RevisionNumberType,
-    Transaction, TransactionGroup, ViewSheet,
+    ElementId, FilteredElementCollector, NumericRevisionSettings, Revision,
+    RevisionNumberingSequence, RevisionNumberType, Transaction,
+    TransactionGroup, ViewSheet,
 )
 from System.Collections.Generic import List
 
@@ -44,43 +45,79 @@ OLDER_REVISION_SHEETS = 2   # left on the previous revision on purpose
 UNREVISED_SHEETS = 1        # left with nothing, to exercise rule R8
 
 REVISIONS = [
-    {"description": "Planning Issue", "date": "01.06.26", "number": "P03"},
-    {"description": "Planning Submission", "date": "27.07.26", "number": "P04"},
+    {"description": "Planning Issue", "date": "01.06.26"},
+    {"description": "Planning Submission", "date": "27.07.26"},
 ]
 
+# HDR-style labels come from a numbering sequence, not from writing a string
+# onto the revision. Prefix "P" with two digits starting at 3 gives P03, P04.
+SEQUENCE_NAME = "HDR Planning"
+SEQUENCE_PREFIX = "P"
+SEQUENCE_START = 3
+SEQUENCE_DIGITS = 2
 
-def set_custom_number(doc, revision, wanted):
-    """Try to give the revision a specific label like "P04".
 
-    Revit's numbering is sequence-driven and not straightforward to force. If
-    this fails the revision still works -- extract.py falls back to the
-    sequence number, so filenames read Rev1/Rev2 instead of RevP03/RevP04.
-    Reported either way rather than failing silently.
+def make_numbering_sequence(doc):
+    """Create a P03/P04-style numbering sequence, or None if Revit refuses.
+
+    Setting revision.RevisionNumber directly does not work -- Revit owns the
+    numbering and overwrites it, which is why the first attempt produced "2"
+    and "3". Numbering is driven by a RevisionNumberingSequence instead.
+
+    Returns the sequence's ElementId, or None. A failure here is not fatal:
+    revisions still get Revit's default numbers and extract.py's sequence
+    fallback keeps filenames valid, just less realistic.
     """
+    # Reuse ours if a previous run already made it -- this button is expected
+    # to be pressed more than once, and duplicate sequences accumulate.
     try:
-        # "None" is a Python keyword, so this enum member cannot be written as
-        # RevisionNumberType.None -- it has to be fetched by name.
-        revision.NumberType = getattr(RevisionNumberType, "None")
+        for existing in FilteredElementCollector(doc).OfClass(
+                RevisionNumberingSequence):
+            if existing.Name == SEQUENCE_NAME:
+                return existing.Id
     except Exception:
         pass
-    for attribute in ("RevisionNumber", "Number"):
-        try:
-            setattr(revision, attribute, wanted)
-            return True
-        except Exception:
-            continue
-    return False
+
+    try:
+        settings = NumericRevisionSettings()
+        settings.Prefix = SEQUENCE_PREFIX
+        settings.StartNumber = SEQUENCE_START
+        settings.MinimumDigits = SEQUENCE_DIGITS
+        sequence = RevisionNumberingSequence.CreateNumericSequence(
+            doc, SEQUENCE_NAME, settings
+        )
+        return sequence.Id
+    except Exception:
+        return None
+
+
+def apply_sequence(revision, sequence_id):
+    """Point a revision at our numbering sequence. True if it took."""
+    if sequence_id is None:
+        return False
+    try:
+        revision.NumberType = RevisionNumberType.Numeric
+        revision.RevisionNumberingSequenceId = sequence_id
+        return True
+    except Exception:
+        return False
 
 
 def main():
     doc = revit.doc
 
+    existing_revisions = len(list(
+        FilteredElementCollector(doc).OfClass(Revision)))
+
     if not forms.alert(
         "This MODIFIES your model.\n\n"
         "It creates two revisions and assigns them to the first {0} sheets, so "
         "Export Issue has something real to work with.\n\n"
+        "This model already has {1} revision(s). Each run adds two more -- "
+        "Ctrl+Z after each run if you are experimenting.\n\n"
         "Only run this on a sample or scratch model.\n\n"
-        "One Ctrl+Z undoes all of it.".format(SHEETS_TO_SEED),
+        "One Ctrl+Z undoes all of it.".format(
+            SHEETS_TO_SEED, existing_revisions),
         title="Seed Revisions", ok=False, yes=True, no=True,
     ):
         return
@@ -103,11 +140,12 @@ def main():
         created = []
         transaction = Transaction(doc, "Create revisions")
         transaction.Start()
+        sequence_id = make_numbering_sequence(doc)
         for spec in REVISIONS:
             revision = Revision.Create(doc)
             revision.Description = spec["description"]
             revision.RevisionDate = spec["date"]
-            numbered = set_custom_number(doc, revision, spec["number"])
+            numbered = apply_sequence(revision, sequence_id)
             created.append((revision, spec, numbered))
         transaction.Commit()
 
@@ -141,15 +179,14 @@ def main():
 
     lines = ["Seeded {0} sheets.".format(len(sheets)), ""]
     for revision, spec, numbered in created:
-        actual = ""
         try:
-            actual = revision.RevisionNumber or "(sequence {0})".format(
+            actual = revision.RevisionNumber or "(seq {0})".format(
                 revision.SequenceNumber)
         except Exception:
-            actual = "(sequence {0})".format(revision.SequenceNumber)
-        lines.append("  {0} -> {1}{2}".format(
-            spec["number"], actual,
-            "" if numbered else "   [custom number not accepted]"))
+            actual = "(seq {0})".format(revision.SequenceNumber)
+        lines.append("  {0:<22} -> {1}{2}".format(
+            spec["description"], actual,
+            "" if numbered else "   [numbering sequence refused]"))
 
     lines.append("")
     for number, which in report:
