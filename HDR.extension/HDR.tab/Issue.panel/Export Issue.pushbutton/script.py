@@ -40,6 +40,8 @@ def default_export_root(doc):
 
 def main():
     doc = revit.doc
+    print("Export Issue starting...")
+    print("Model: {0}".format(doc.Title))
 
     # Fail fast, before any work, rather than at commit time.
     if doc.IsReadOnly:
@@ -52,17 +54,32 @@ def main():
         return
 
     root = default_export_root(doc)
+    print("Export root: {0}".format(root))
 
     # A cheap pre-read of series names, so G1 can offer a real list before the
     # full Extract runs.
+    print("Reading model...")
     preview = extract.capture(doc, root, SERIES_STRATEGY, SERIES_PARAM)
+    print("  {0} sheets, {1} revisions".format(
+        len(preview["model"]["sheets"]), len(preview["model"]["revisions"])))
+
     available = series_module.available(preview["model"]["sheets"])
+    print("  series found: {0}".format(
+        [s if s else "(none)" for s in available]))
+    if preview["model"].get("series_fallback"):
+        print("  (Sheet Collections empty -- grouped by sheet number prefix)")
+    print("")
+    print("A dialog should now be open. If you cannot see it, check behind")
+    print("this window (Alt+Tab).")
 
     # --- G1: scope -------------------------------------------------------
     scope = g1_scope.prompt(doc, available, root,
                             preview["model"].get("series_fallback"))
     if scope is None:
+        print("Cancelled at scope.")
         return
+    print("Scope: series={0} formats={1}".format(
+        scope["series"], scope["formats"]))
 
     # --- EXTRACT ---------------------------------------------------------
     snapshot = (preview if scope["export_root"] == root
@@ -77,6 +94,8 @@ def main():
 
     # --- CHECK -----------------------------------------------------------
     verdict = check.evaluate(snapshot, changeset)
+    print("Proposed {0} file(s); set verdict: {1}".format(
+        len(changeset["operations"]), verdict["set_verdict"]))
 
     # --- G2: review ------------------------------------------------------
     selected = g2_diff.review(snapshot, changeset, verdict, dry_run=DRY_RUN)
@@ -112,5 +131,17 @@ def main():
     g3_summary.show(outcome, audit_path, scope["export_root"])
 
 
-if __name__ == "__main__":
-    main()
+def run():
+    """Entry point with reporting, so a silent failure cannot look like a
+    blank window."""
+    try:
+        main()
+    except Exception:
+        import traceback
+        print("")
+        print("FAILED:")
+        print(traceback.format_exc())
+        raise
+
+
+run()
