@@ -13,6 +13,48 @@ dataclasses so this module runs unchanged under IronPython 2.7. See ADR-002.
 
 SCHEMA_VERSION = 1
 
+
+def ascii_safe(value):
+    """Recursively coerce a structure so json.dumps cannot fail on encoding.
+
+    Revit strings reach us through .NET and may carry characters that the
+    active code page cannot translate -- a sheet named "Cafe\xe9" crashed the
+    snapshot hash with UnicodeDecodeError before this existed. Since both the
+    hash and the audit record only need a faithful, stable representation
+    rather than a readable one, non-ASCII characters are escaped rather than
+    dropped, so two different names never collapse to the same text.
+
+    Handles both engines: `unicode` exists under IronPython 2.7 and not under
+    CPython 3.
+    """
+    if isinstance(value, dict):
+        return dict((ascii_safe(k), ascii_safe(v)) for k, v in value.items())
+    if isinstance(value, (list, tuple)):
+        return [ascii_safe(v) for v in value]
+    if value is None or isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value
+
+    try:
+        text_types = (str, unicode)      # noqa: F821 -- IronPython 2.7
+    except NameError:
+        text_types = (str,)              # CPython 3
+
+    if not isinstance(value, text_types):
+        try:
+            value = str(value)
+        except Exception:
+            return "<unrepresentable>"
+
+    try:
+        return value.encode("ascii", "backslashreplace").decode("ascii")
+    except Exception:
+        try:
+            return "".join(c for c in value if ord(c) < 128)
+        except Exception:
+            return "<unrepresentable>"
+
 # --------------------------------------------------------------------------
 # Targets
 # --------------------------------------------------------------------------

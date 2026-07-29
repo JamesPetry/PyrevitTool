@@ -185,3 +185,34 @@ class TestDryRunCommit(object):
         outcome = commit.apply(None, [rogue], dry_run=True)
         assert outcome["failed"] and not outcome["written"]
         assert "no executor" in outcome["failed"][0]["detail"]
+
+
+class TestAsciiSafe(object):
+    """Regression guards for the UnicodeDecodeError that killed the first run.
+
+    A Revit string carrying 0xE9 crashed json.dumps in the snapshot hash --
+    the tool failed before showing a single dialog.
+    """
+
+    def test_accented_text_survives_json(self):
+        import json
+        payload = {"name": u"Caf\xe9 Plan", "n": 3}
+        json.dumps(contracts.ascii_safe(payload))
+
+    def test_distinct_names_do_not_collapse(self):
+        """Escaping, not stripping -- two different sheets must stay different."""
+        a = contracts.ascii_safe(u"Caf\xe9")
+        b = contracts.ascii_safe(u"Cafe")
+        assert a != b
+
+    def test_nested_structures_are_walked(self):
+        import json
+        payload = {"sheets": [{"name": u"\xe9\xe8", "views": 2}]}
+        json.dumps(contracts.ascii_safe(payload))
+
+    def test_non_string_scalars_are_preserved(self):
+        assert contracts.ascii_safe({"a": 1, "b": True, "c": None, "d": 2.5}) == {
+            "a": 1, "b": True, "c": None, "d": 2.5}
+
+    def test_plain_ascii_is_unchanged(self):
+        assert contracts.ascii_safe("A101") == "A101"

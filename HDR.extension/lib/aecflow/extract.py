@@ -230,10 +230,18 @@ def _writable(root):
 def _hash(snapshot):
     """Stable digest of the snapshot, for the audit trail.
 
-    Lets a run be tied to exactly the model state it was computed from.
+    Lets a run be tied to exactly the model state it was computed from. A
+    failure here must never take the run down -- the hash is a convenience for
+    the audit record, not something the export depends on.
     """
-    payload = json.dumps(
-        {"model": snapshot["model"], "filesystem": snapshot["filesystem"]},
-        sort_keys=True, default=str,
-    )
-    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+    try:
+        payload = json.dumps(
+            contracts.ascii_safe({
+                "model": snapshot["model"],
+                "filesystem": snapshot["filesystem"],
+            }),
+            sort_keys=True, default=str,
+        )
+        return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+    except Exception:
+        return "unhashed"

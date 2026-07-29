@@ -33,9 +33,17 @@ SERIES_PARAM = None
 
 
 def default_export_root(doc):
-    """Alongside the .rvt until Q4 settles on something project-specific."""
+    """Alongside the .rvt until Q4 settles on something project-specific.
+
+    Sample models live under Program Files, which is not writable, so the
+    default falls back to Documents rather than offering a root that rule R6
+    will only reject later.
+    """
     path = doc.PathName
-    return os.path.dirname(path) if path else ""
+    folder = os.path.dirname(path) if path else ""
+    if folder and os.access(folder, os.W_OK):
+        return folder
+    return os.path.join(os.path.expanduser("~"), "Documents", "HDR Exports")
 
 
 def main():

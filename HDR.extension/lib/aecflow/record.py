@@ -14,6 +14,8 @@ import datetime
 import json
 import os
 
+from aecflow import contracts
+
 AUDIT_DIR = "_audit"
 SCHEMA_VERSION = 1
 
@@ -56,9 +58,14 @@ def write(export_root, snapshot, intent, changeset, verdict, outcome):
     try:
         if not os.path.isdir(folder):
             os.makedirs(folder)
+        # Sheet names arrive from .NET and may carry characters the active code
+        # page cannot translate; escaping them keeps the audit writable.
+        text = json.dumps(
+            contracts.ascii_safe(payload), indent=2, sort_keys=True
+        )
         handle = open(path, "w")
         try:
-            handle.write(json.dumps(payload, indent=2, sort_keys=True))
+            handle.write(text)
         finally:
             handle.close()
         return path
