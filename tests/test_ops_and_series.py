@@ -47,18 +47,44 @@ class TestSeriesResolution(object):
         assert series.resolve(
             Sheet(), "A101", series.SHEET_COLLECTION) == "Planning Package"
 
-    def test_a_blank_parameter_is_treated_as_no_series(self):
+    @staticmethod
+    def sheet_returning(value):
         class Param(object):
             HasValue = True
 
             def AsString(self):
-                return "   "
+                return value
+
+            def AsValueString(self):
+                return value
 
         class Sheet(object):
             def LookupParameter(self, name):
                 return Param()
 
-        assert series.resolve(Sheet(), "A101", series.SHEET_COLLECTION) is None
+        return Sheet()
+
+    def test_a_blank_parameter_is_treated_as_no_series(self):
+        assert series.resolve(
+            self.sheet_returning("   "), "A101", series.SHEET_COLLECTION) is None
+
+    @pytest.mark.parametrize("value", ["<None>", "<none>", "None", ""])
+    def test_revits_unset_sentinel_is_not_a_series_name(self, value):
+        """Found by the probe on 2026-07-29.
+
+        Revit reports an unassigned Sheet Collection as the literal string
+        "<None>", not as blank or absent. All 55 sheets in the sample model
+        returned it. Without this, every unassigned sheet would be grouped
+        into a package called "<None>".
+        """
+        assert series.resolve(
+            self.sheet_returning(value), "A101", series.SHEET_COLLECTION) is None
+
+    def test_a_series_genuinely_called_none_something_is_kept(self):
+        """Guard against over-matching the sentinel."""
+        assert series.resolve(
+            self.sheet_returning("Nonstructural"), "A101",
+            series.SHEET_COLLECTION) == "Nonstructural"
 
     def test_unknown_strategy_raises(self):
         with pytest.raises(ValueError):

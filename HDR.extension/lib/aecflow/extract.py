@@ -61,7 +61,10 @@ def _read_model(doc, series_strategy, series_param):
                  for r in FilteredElementCollector(doc).OfClass(Revision))
 
     sheets = []
-    for sheet in FilteredElementCollector(doc).OfClass(ViewSheet):
+    elements = list(FilteredElementCollector(doc).OfClass(ViewSheet))
+    strategy = series_strategy or series_module.DEFAULT_STRATEGY
+
+    for sheet in elements:
         sheets.append({
             "uid": sheet.UniqueId,
             "number": sheet.SheetNumber,
@@ -70,9 +73,23 @@ def _read_model(doc, series_strategy, series_param):
             "view_count": _placed_view_count(sheet),
             "current_revision_uid": _current_revision_uid(sheet, by_id),
             "series": series_module.resolve(
-                sheet, sheet.SheetNumber, series_strategy, series_param
+                sheet, sheet.SheetNumber, strategy, series_param
             ),
         })
+
+    # Sheet Collections exist in every 2025 model but most projects have not
+    # populated them -- the probe found all 55 sheets returning "<None>".
+    # Rather than offer the user an empty picker, fall back to sheet-number
+    # prefixes, which always yield something. The fallback is recorded so the
+    # UI can say which grouping it is actually showing.
+    series_fallback = None
+    if strategy == series_module.SHEET_COLLECTION and sheets:
+        if not any(s["series"] for s in sheets):
+            series_fallback = series_module.PREFIX
+            for record, sheet in zip(sheets, elements):
+                record["series"] = series_module.resolve(
+                    sheet, sheet.SheetNumber, series_module.PREFIX
+                )
 
     return {
         "doc_title": doc.Title,
@@ -80,6 +97,8 @@ def _read_model(doc, series_strategy, series_param):
         "central_path": _central_path(doc, ModelPathUtils),
         "is_workshared": bool(doc.IsWorkshared),
         "is_read_only": bool(doc.IsReadOnly),
+        "series_strategy": series_fallback or strategy,
+        "series_fallback": series_fallback,
         "project": {
             "number": _param_string(info, BuiltInParameter.PROJECT_NUMBER),
             "name": _param_string(info, BuiltInParameter.PROJECT_NAME),

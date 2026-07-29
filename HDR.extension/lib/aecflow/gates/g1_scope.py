@@ -20,7 +20,7 @@ FORMAT_LABELS = {
 DEFAULT_FORMATS = ("pdf",)
 
 
-def prompt(doc, available_series, default_root):
+def prompt(doc, available_series, default_root, series_fallback=None):
     """Returns a scope dict, or None if the user cancelled."""
     if not available_series:
         forms.alert(
@@ -32,9 +32,17 @@ def prompt(doc, available_series, default_root):
         )
         return None
 
+    # Say which grouping is on screen. Most projects have not populated Sheet
+    # Collections, so the list is often sheet-number prefixes instead -- the
+    # user should not have to guess which they are looking at.
+    if series_fallback:
+        title = "Which sheet series?  (grouped by sheet number prefix)"
+    else:
+        title = "Which sheet series?  (Sheet Collections)"
+
     labels = [s if s else "(sheets with no series)" for s in available_series]
     chosen_label = forms.SelectFromList.show(
-        labels, title="Which sheet series?", multiselect=False, button_name="Next",
+        labels, title=title, multiselect=False, button_name="Next",
     )
     if not chosen_label:
         return None

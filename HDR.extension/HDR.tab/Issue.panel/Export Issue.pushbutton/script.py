@@ -21,9 +21,11 @@ from aecflow.gates import g1_scope, g2_diff, g3_summary
 
 logger = script.get_logger()
 
-# Hard Invariant 4: dry-run is the default while the tool is unproven.
-# Flip to False once the ADR-003 spike has confirmed export behaviour.
-DRY_RUN = True
+# Was True while export behaviour was unproven. The ADR-003 probe confirmed on
+# 2026-07-29 that Combine=True with a single sheet honours FileName exactly, so
+# real exports are now enabled. The G2 review table remains the gate: nothing is
+# written without explicit per-row approval.
+DRY_RUN = False
 
 # Q9 is still open -- Sheet Collections is the Revit 2025 default.
 SERIES_STRATEGY = series_module.SHEET_COLLECTION
@@ -57,7 +59,8 @@ def main():
     available = series_module.available(preview["model"]["sheets"])
 
     # --- G1: scope -------------------------------------------------------
-    scope = g1_scope.prompt(doc, available, root)
+    scope = g1_scope.prompt(doc, available, root,
+                            preview["model"].get("series_fallback"))
     if scope is None:
         return
 

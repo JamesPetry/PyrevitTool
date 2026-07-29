@@ -1,6 +1,6 @@
 # ADR-003 — One export call per output file
 
-**Status:** Proposed (for review 2026-07-27)
+**Status:** **Accepted — confirmed by measurement 2026-07-29**
 
 ## Context
 
@@ -53,18 +53,32 @@ between ops come for free.
 **Cost.** A 64-sheet issue becomes 64 `Export` calls rather than one. Per-call overhead is
 unknown and may be significant.
 
-**Unvalidated.** The performance cost is the open risk. It is measurable rather than
-arguable, and must be measured before `commit.py` is written:
+**Measured 2026-07-29.** Revit 2025 (25.4.60.9), Snowdon Towers sample model, 55 sheets,
+non-workshared, local disk.
 
-1. Export one sheet with `Combine = true` and an explicit `FileName`; confirm the exact file
-   appears.
-2. Time a 10-sheet loop; extrapolate to 64.
-3. Time one batch call with `Combine = false` over the same 10 sheets; compare.
+| Test | Result |
+|---|---|
+| One sheet, `Combine=true`, `FileName="12345-A100-RevP04"` | Produced exactly `12345-A100-RevP04.pdf` — **exact match** |
+| 10 sheets, one call each | 19.6 s |
+| 10 sheets, one batch call (`Combine=false`) | 16.0 s |
+| Ratio | Per-sheet **1.2× slower** |
+| Extrapolated to 64 sheets | ~126 s |
 
-**Fallback if per-sheet proves too slow.** Batch export, then rename. Every destination path
-is known before the run begins, so the rename is deterministic — but it widens the failure
-window between writing and naming, and inherits whatever `NamingRule` produced in the
-interim. Preferred only if the measurement demands it.
+Names Revit chose for itself in batch mode: `Sheet-Fifth Floor Plan.pdf`,
+`Sheet-First Floor Plan.pdf`, `Sheet-Green Roof.pdf`. No project number, no sheet number, no
+revision — unusable, exactly as the documentation predicted.
+
+The decision holds comfortably. Per-sheet costs roughly 20% more wall time and buys correct
+filenames outright; two minutes for a 64-sheet issue is well inside what the progress bar
+makes tolerable. `DRY_RUN` was flipped to `False` on the strength of this.
+
+**Fallback, now unnecessary.** Batch export then rename remains theoretically available —
+every destination path is known before the run begins, so the rename would be deterministic —
+but it widens the failure window between writing and naming for a 20% saving. Not worth it.
+
+**Still unmeasured.** The sample model is not workshared and sits on local disk. Per-sheet
+cost over a network path, and on a workshared central, could differ materially. Worth
+re-running the probe on a real project model before anyone relies on the 126 s figure.
 
 **Incidental confirmation.** The characters Revit rejects in a naming rule
 (`\ / : * ? " < > |`) are exactly the set `naming.sanitise()` already substitutes, which

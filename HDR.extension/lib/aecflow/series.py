@@ -64,6 +64,14 @@ def _from_prefix(sheet_number):
     return match.group(1).upper() if match else None
 
 
+# Revit reports an unassigned Sheet Collection as the literal string "<None>"
+# rather than as a blank or an absent value. Confirmed by the probe on
+# 2026-07-29: all 55 sheets in the sample model returned "<None>". Treating it
+# as a series name would silently group every unassigned sheet into a package
+# called "<None>".
+UNSET_VALUES = ("<none>", "none", "")
+
+
 def _from_parameter(sheet_element, param_name):
     """Read a named parameter off the sheet.
 
@@ -81,9 +89,15 @@ def _from_parameter(sheet_element, param_name):
         if parameter is None or not parameter.HasValue:
             return None
         value = parameter.AsString() or parameter.AsValueString()
-        return value.strip() if value and value.strip() else None
     except Exception:
         return None
+
+    if not value:
+        return None
+    cleaned = value.strip()
+    if cleaned.lower() in UNSET_VALUES:
+        return None
+    return cleaned
 
 
 def available(sheets):
