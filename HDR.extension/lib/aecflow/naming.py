@@ -65,6 +65,19 @@ def sanitise(value):
     return cleaned
 
 
+def is_nameable(value):
+    """True when a value can identify a file after sanitisation.
+
+    Emptiness is not a strict enough test. A sheet numbered "///" sanitises to
+    "---", which is non-empty and contains no illegal characters, yet produces
+    "12345-----RevP04.pdf" -- a legal filename that identifies nothing and that
+    Archive cannot map back to a sheet. Requiring at least one alphanumeric
+    character is what actually distinguishes a name from punctuation.
+    """
+    cleaned = sanitise(value)
+    return any(c.isalnum() for c in cleaned)
+
+
 def sheet_filename(project_number, sheet_number, revision, ext):
     """Build a sheet export filename.
 
@@ -128,23 +141,61 @@ def archive_path(export_root, folder_name, filename):
     )
 
 
-def parse_export_filename(filename):
+REV_MARKER = "-Rev"
+
+
+def parse_export_filename(filename, project_number=None):
     """Recover (sheet_number, revision) from a sheet export filename.
 
-    Archive & Close needs this to decide which files belong to a superseded
-    issue. Returns None when the name does not match the convention -- callers
-    must not archive what they cannot parse.
+    Archive needs this to decide which files supersede which. Returns None
+    when the name does not match the convention -- callers must never move
+    what they cannot parse.
+
+    **Pass project_number whenever you have it.** The separator is a hyphen and
+    project numbers frequently contain hyphens, so the boundary between project
+    and sheet is genuinely ambiguous without it. "7765328-33-A-A101-RevP04.pdf"
+    read sheet "33-A-A101" before this argument existed, which would have
+    grouped unrelated sheets together during archiving.
+
+    The revision is taken from the LAST "-Rev" so revisions may contain hyphens.
 
     >>> parse_export_filename("12345-A101-RevP03.pdf")
     ('A101', 'P03')
+    >>> parse_export_filename("7765328-33-A-A101-RevP04.pdf", "7765328-33-A")
+    ('A101', 'P04')
+    >>> parse_export_filename("12345-A101-RevP04-A.pdf", "12345")
+    ('A101', 'P04-A')
     >>> parse_export_filename("scratch notes.pdf") is None
     True
     """
     stem = os.path.splitext(os.path.basename(filename))[0]
-    match = re.match(r"^(?P<project>[^-]+)-(?P<sheet>.+)-Rev(?P<rev>[^-]+)$", stem)
-    if not match:
+
+    index = stem.rfind(REV_MARKER)
+    if index <= 0:
         return None
-    return (match.group("sheet"), match.group("rev"))
+
+    revision = stem[index + len(REV_MARKER):]
+    left = stem[:index]
+    if not revision or not left:
+        return None
+
+    if project_number:
+        prefix = sanitise(project_number) + "-"
+        if not left.startswith(prefix):
+            return None
+        sheet = left[len(prefix):]
+    else:
+        # Without context, assume the project number is the first token. This
+        # is wrong for hyphenated project numbers, which is why callers should
+        # supply one.
+        parts = left.split("-", 1)
+        if len(parts) != 2:
+            return None
+        sheet = parts[1]
+
+    if not sheet:
+        return None
+    return (sheet, revision)
 
 
 def path_too_long(path):

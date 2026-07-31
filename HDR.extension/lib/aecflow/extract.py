@@ -23,7 +23,10 @@ from aecflow import series as series_module
 def capture(doc, export_root, series_strategy=None, series_param=None):
     """Read (doc, export_root) into a Snapshot."""
     model = _read_model(doc, series_strategy, series_param)
-    filesystem = _read_filesystem(export_root)
+    # The project number disambiguates the project/sheet boundary in export
+    # filenames, which is otherwise guesswork when it contains hyphens.
+    filesystem = _read_filesystem(
+        export_root, model["project"].get("number"))
 
     snapshot = contracts.make_snapshot(
         model, filesystem, datetime.datetime.now().isoformat()
@@ -171,20 +174,25 @@ def _param_string(element, built_in):
 # --------------------------------------------------------------------------
 
 
-def _read_filesystem(export_root):
+def _read_filesystem(export_root, project_number=None):
     """What is already on disk under the export root.
 
-    Rule R2 needs this to refuse overwrites, and Archive & Close will need it
-    to work out per-sheet supersession.
+    Rule R2 needs this to refuse overwrites, and Archive needs it to work out
+    per-sheet supersession.
+
+    Paths are absolutised. R2 compares these against destinations that Resolve
+    has already absolutised, and a mismatch in form makes the comparison
+    silently miss -- which would let an export overwrite a previous issue.
     """
     existing = []
+    export_root = os.path.abspath(export_root)
     exports = os.path.join(export_root, naming.CONVENTION["export_dir"])
 
     if os.path.isdir(exports):
         for folder, _dirs, files in os.walk(exports):
             for filename in files:
-                path = os.path.join(folder, filename)
-                parsed = naming.parse_export_filename(filename)
+                path = os.path.abspath(os.path.join(folder, filename))
+                parsed = naming.parse_export_filename(filename, project_number)
                 existing.append({
                     "path": path,
                     "size": _size(path),

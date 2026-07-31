@@ -14,7 +14,7 @@ Export Issue rule set (design doc section 6):
     R5 filename_is_legal           block
     R6 export_root_writable        block
     R7 sheet_has_placed_views      warn
-    R8 sheet_has_a_revision        warn
+    R8 sheet_is_nameable           warn
 """
 
 import os
@@ -37,6 +37,17 @@ def _writing_ops(changeset):
     return [o for o in changeset["operations"] if o["args"].get("dest_path")]
 
 
+def _key(path):
+    """Canonical comparison form for a path.
+
+    Both absolutised and case-folded. R2 compares snapshot paths against
+    changeset destinations, and if the two sides differ in form the comparison
+    silently misses -- which would let an export overwrite a previous issue.
+    Normalising here means the rule holds regardless of what the caller passed.
+    """
+    return os.path.normcase(os.path.abspath(path or ""))
+
+
 # --------------------------------------------------------------------------
 
 
@@ -49,7 +60,7 @@ def r1_no_duplicate_destinations(snapshot, changeset):
     seen = {}
     results = []
     for op in _writing_ops(changeset):
-        path = os.path.normcase(op["args"]["dest_path"])
+        path = _key(op["args"]["dest_path"])
         if path in seen:
             results.append(_result(
                 op["op_id"], contracts.BLOCK, "R1",
@@ -69,12 +80,11 @@ def r2_no_overwrite(snapshot, changeset):
     destroy a previous issue.
     """
     existing = set(
-        os.path.normcase(f["path"])
-        for f in snapshot["filesystem"].get("existing") or []
+        _key(f["path"]) for f in snapshot["filesystem"].get("existing") or []
     )
     results = []
     for op in _writing_ops(changeset):
-        if os.path.normcase(op["args"]["dest_path"]) in existing:
+        if _key(op["args"]["dest_path"]) in existing:
             results.append(_result(
                 op["op_id"], contracts.BLOCK, "R2",
                 "{0} already exists -- archive it first".format(
@@ -188,8 +198,12 @@ def r7_sheet_has_placed_views(snapshot, changeset):
     return results
 
 
-def r8_sheet_has_a_revision(snapshot, changeset):
-    """Every sheet needs a revision to build a filename from.
+def r8_sheet_is_nameable(snapshot, changeset):
+    """Every sheet needs a revision AND a number to build a filename from.
+
+    A sheet whose number sanitises away entirely is as unnameable as one with
+    no revision, and produces "12345--RevP04.pdf" -- untraceable to a sheet and
+    unparseable by Archive.
 
     Inverted 2026-07-27. This rule used to warn when sheets carried DIFFERENT
     revisions, which assumed issue-based selection. Under per-sheet selection
@@ -201,12 +215,17 @@ def r8_sheet_has_a_revision(snapshot, changeset):
     for op in changeset["operations"]:
         if op["target"]["kind"] != contracts.TARGET_ELEMENT:
             continue
-        if not op["args"].get("revision"):
+        number = op["args"].get("sheet_number")
+        if not naming.is_nameable(number):
+            results.append(_result(
+                op["op_id"], contracts.WARN, "R8",
+                "sheet has no usable number -- skipped",
+            ))
+        elif not op["args"].get("revision"):
             results.append(_result(
                 op["op_id"], contracts.WARN, "R8",
                 "sheet {0} has no revision yet -- skipped".format(
-                    op["args"].get("sheet_number")
-                ),
+                    naming.sanitise(number)),
             ))
     return results
 
@@ -219,5 +238,5 @@ ALL_RULES = (
     r5_filename_is_legal,
     r6_export_root_writable,
     r7_sheet_has_placed_views,
-    r8_sheet_has_a_revision,
+    r8_sheet_is_nameable,
 )

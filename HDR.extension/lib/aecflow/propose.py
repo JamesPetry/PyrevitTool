@@ -101,7 +101,13 @@ def _current_revision_label(model, sheet):
 
 
 def _sheet_op(kind, sheet, revision, project_number, export_root, ext):
-    if revision:
+    # A sheet number that sanitises away entirely leaves a hole in the
+    # filename -- "12345--RevP04.pdf" -- which is not a name anyone can trace
+    # back to a sheet, and which Archive cannot parse. Treated exactly like a
+    # missing revision: no destination, flagged at G2, never silently written.
+    nameable = naming.is_nameable(sheet.get("number"))
+
+    if revision and nameable:
         filename = naming.sheet_filename(
             project_number, sheet.get("number"), revision, ext
         )
@@ -109,6 +115,9 @@ def _sheet_op(kind, sheet, revision, project_number, export_root, ext):
         rationale = "Sheet {0} at its current revision {1}".format(
             sheet.get("number"), revision
         )
+    elif not nameable:
+        dest = None
+        rationale = "Sheet has no usable number -- cannot build a filename"
     else:
         # No revision means no filename. Carried through with dest_path None so
         # it appears at G2 as a flagged row rather than disappearing.

@@ -28,14 +28,19 @@ def _archive_ops(changeset):
             if o["kind"] == contracts.ARCHIVE_FILE]
 
 
+def _key(path):
+    """Canonical comparison form -- see the note in rules/__init__.py."""
+    return os.path.normcase(os.path.abspath(path or ""))
+
+
 def a1_source_exists(snapshot, changeset):
     """The file being moved must still be on disk per the Snapshot."""
-    known = set(os.path.normcase(f["path"])
+    known = set(_key(f["path"])
                 for f in snapshot["filesystem"].get("existing") or [])
     results = []
     for op in _archive_ops(changeset):
         source = op["target"].get("path") or ""
-        if os.path.normcase(source) not in known:
+        if _key(source) not in known:
             results.append(_result(
                 op["op_id"], contracts.BLOCK, "A1",
                 "source file is not in the snapshot: {0}".format(
@@ -62,11 +67,11 @@ def a2_never_archive_current(snapshot, changeset):
     current_paths = set()
     for entries in groups.values():
         newest = sorted(entries, key=lambda e: ranks(e["revision"]))[-1]
-        current_paths.add(os.path.normcase(newest["path"]))
+        current_paths.add(_key(newest["path"]))
 
     results = []
     for op in _archive_ops(changeset):
-        source = os.path.normcase(op["target"].get("path") or "")
+        source = _key(op["target"].get("path"))
         if source in current_paths:
             results.append(_result(
                 op["op_id"], contracts.BLOCK, "A2",
@@ -81,7 +86,7 @@ def a3_no_duplicate_destination(snapshot, changeset):
     seen = {}
     results = []
     for op in _archive_ops(changeset):
-        dest = os.path.normcase(op["args"].get("dest_path") or "")
+        dest = _key(op["args"].get("dest_path"))
         if dest in seen:
             results.append(_result(
                 op["op_id"], contracts.BLOCK, "A3",
