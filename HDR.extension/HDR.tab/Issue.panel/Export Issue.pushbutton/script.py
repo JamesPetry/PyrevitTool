@@ -15,7 +15,8 @@ import os
 
 from pyrevit import forms, revit, script
 
-from aecflow import check, commit, contracts, extract, propose, record, resolve
+from aecflow import (check, commit, contracts, extract, flows, propose, record,
+                     resolve)
 from aecflow import series as series_module
 from aecflow.gates import g1_scope, g2_diff, g3_summary
 
@@ -135,8 +136,61 @@ def main():
     audit_path = record.write(scope["export_root"], snapshot, intent,
                               changeset, verdict, outcome)
 
+    # --- ARCHIVE (optional, ticked at G1) --------------------------------
+    archived = None
+    if scope.get("archive_after") and outcome["written"]:
+        archived = archive_superseded(doc, scope["export_root"])
+
     # --- G3: summary -----------------------------------------------------
-    g3_summary.show(outcome, audit_path, scope["export_root"])
+    g3_summary.show(outcome, audit_path, scope["export_root"], archived)
+
+
+def archive_superseded(doc, root):
+    """Tidy Exports after a successful export. Returns an outcome or None.
+
+    The review table is shown only when Check flags something. Ticking the
+    option at G1 is the user's consent for the clean case, and a second table
+    mid-flow would make the "one button" pointless. Anything flagged still
+    stops for a decision -- automatic when it is safe, gated when it is not.
+
+    Files are moved rather than deleted, and G3 says where they went, so a
+    silent clean run stays reversible.
+    """
+    print("")
+    print("Archiving superseded files...")
+
+    snapshot, intent, changeset, verdict = flows.plan_archive(doc, root)
+    if not changeset["operations"]:
+        print("  nothing superseded")
+        return None
+
+    print("  {0} file(s) superseded; verdict: {1}".format(
+        len(changeset["operations"]), verdict["set_verdict"]))
+
+    if verdict["set_verdict"] == contracts.PASS:
+        approved = check.approved_operations(changeset, verdict)
+    else:
+        selected = g2_diff.review(snapshot, changeset, verdict, dry_run=DRY_RUN)
+        if selected is None:
+            print("  archive cancelled -- exports are untouched")
+            return None
+        approved = check.approved_operations(changeset, verdict, set(selected))
+
+    if not approved:
+        return None
+
+    with forms.ProgressBar(title="Archiving {value} of {max_value}",
+                           cancellable=True) as bar:
+
+        def progress(index, total, op):
+            bar.update_progress(index + 1, total)
+            return not bar.cancelled
+
+        result = commit.apply(doc, approved, dry_run=DRY_RUN, progress=progress)
+
+    record.write(root, snapshot, intent, changeset, verdict, result)
+    print("  {0} file(s) moved to Archive".format(len(result["written"])))
+    return result
 
 
 def run():

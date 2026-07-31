@@ -273,3 +273,52 @@ class TestExecutorRefusals(object):
         result = archive_file.execute(None, op, dry_run=True)
         assert not result["written"]
         assert source.exists()
+
+
+class TestArchiveAfterExportWiring(object):
+    """The chained flow shares one pipeline with the standalone button.
+
+    flows.plan_archive imports Extract, so it cannot run without Revit -- what
+    is asserted here is the wiring, not a live run.
+    """
+
+    def test_flows_reuses_the_same_rules_and_proposer(self):
+        import inspect
+        from aecflow import flows
+        source = inspect.getsource(flows.plan_archive)
+        assert "archive.build" in source
+        assert "archive_rules.ALL_RULES" in source
+
+    def test_flows_recaptures_rather_than_reusing_a_stale_snapshot(self):
+        """The files just exported are what make the older ones superseded, so
+        reusing the export's snapshot would find nothing to archive."""
+        import inspect
+        from aecflow import flows
+        assert "extract_module.capture" in inspect.getsource(flows.plan_archive)
+
+    @staticmethod
+    def gate_source(name):
+        """Gates import pyrevit, so they cannot be imported outside Revit --
+        by design. Read the file instead."""
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "HDR.extension", "lib", "aecflow", "gates", name)
+        with open(path) as handle:
+            return handle.read()
+
+    def test_scope_carries_the_archive_flag(self):
+        """G1 returns archive_after so the button can act on it."""
+        source = self.gate_source("g1_scope.py")
+        assert "archive_after" in source
+        assert "ARCHIVE_OPTION" in source
+
+    def test_archive_only_selection_is_rejected(self):
+        """Ticking the tidy-up box but no format is a plausible slip."""
+        assert "at least one format" in self.gate_source("g1_scope.py")
+
+    def test_g3_reports_archived_files_separately(self):
+        """Moving somebody's previous issue is a different thing from writing
+        a new one -- it must not be folded into the export count."""
+        source = self.gate_source("g3_summary.py")
+        assert "archived" in source
+        assert "MOVED, not deleted" in source

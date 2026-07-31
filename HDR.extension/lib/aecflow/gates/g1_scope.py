@@ -19,6 +19,11 @@ FORMAT_LABELS = {
 }
 DEFAULT_FORMATS = ("pdf",)
 
+# Offered alongside the formats rather than as a fourth dialog. Ticking it
+# tidies Exports straight after the export, so the folder is left holding only
+# the current revision of each sheet.
+ARCHIVE_OPTION = "Archive superseded files afterwards (tidy Exports)"
+
 
 def prompt(doc, available_series, default_root, series_fallback=None):
     """Returns a scope dict, or None if the user cancelled."""
@@ -49,12 +54,20 @@ def prompt(doc, available_series, default_root, series_fallback=None):
     series = available_series[labels.index(chosen_label)]
 
     chosen_formats = forms.SelectFromList.show(
-        [FORMAT_LABELS[f] for f in FORMATS],
+        [FORMAT_LABELS[f] for f in FORMATS] + [ARCHIVE_OPTION],
         title="Which formats?", multiselect=True, button_name="Next",
     )
     if not chosen_formats:
         return None
+
     formats = [f for f in FORMATS if FORMAT_LABELS[f] in chosen_formats]
+    archive_after = ARCHIVE_OPTION in chosen_formats
+
+    # Ticking only the archive option is a plausible slip -- there would be
+    # nothing to export and nothing newly superseded.
+    if not formats:
+        forms.alert("Pick at least one format to export.", title="Export Issue")
+        return None
 
     # pick_folder's signature has varied across pyRevit versions; fall back to
     # the model's own folder rather than failing the run over a keyword.
@@ -72,5 +85,6 @@ def prompt(doc, available_series, default_root, series_fallback=None):
     return {
         "series": series,
         "formats": formats,
+        "archive_after": archive_after,
         "export_root": os.path.abspath(export_root),
     }

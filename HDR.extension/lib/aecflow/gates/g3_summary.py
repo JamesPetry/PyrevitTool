@@ -13,7 +13,11 @@ from pyrevit import forms
 from aecflow import commit
 
 
-def show(outcome, audit_path, export_root):
+def show(outcome, audit_path, export_root, archived=None):
+    """`archived` is the archive outcome when the tidy-up option was ticked,
+    or None. It is reported explicitly rather than folded into the export
+    count, because moving somebody's previous issue is a separate thing from
+    writing a new one and they should see it named."""
     written = outcome["written"]
     failed = outcome["failed"]
 
@@ -43,6 +47,21 @@ def show(outcome, audit_path, export_root):
                 os.path.basename(failure.get("dest_path") or "?"),
                 failure.get("detail", ""),
             ))
+
+    if archived is not None:
+        moved = len(archived["written"])
+        lines.append("")
+        if moved:
+            lines.append("{0} superseded file(s) moved to Archive.".format(moved))
+            lines.append("Exports now holds only the current revision of each")
+            lines.append("sheet. They were MOVED, not deleted:")
+            lines.append("  {0}".format(
+                os.path.join(export_root, "Archive")))
+        else:
+            lines.append("Nothing was superseded -- Exports was already tidy.")
+        if archived["failed"]:
+            lines.append("{0} file(s) could not be archived.".format(
+                len(archived["failed"])))
 
     lines.append("")
     lines.append("This wrote files; it did not change your model, so Ctrl+Z")
