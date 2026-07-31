@@ -27,7 +27,7 @@ from pyrevit import forms, revit, script
 from aecflow import archive, check, commit, contracts, extract, record, resolve
 from aecflow import series as series_module
 from aecflow.rules import archive_rules
-from aecflow.gates import g2_diff, g3_summary
+from aecflow.gates import g1_scope, g2_diff, g3_summary
 
 logger = script.get_logger()
 
@@ -47,7 +47,12 @@ def pick_root(doc):
         picked = forms.pick_folder()
     except Exception:
         picked = None
-    return picked or folder
+
+    # Picking Exports/ instead of its parent is especially likely here, since
+    # that is the folder the user was just looking at. Getting it wrong makes
+    # the tool report "nothing superseded" while superseded files sit in plain
+    # sight, which is worse than an error.
+    return g1_scope.resolve_root(picked or folder)
 
 
 def main():

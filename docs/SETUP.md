@@ -90,7 +90,30 @@ Delete `%TEMP%\aecflow_spike` afterwards.
 
 ---
 
-## 5. Export Issue
+## 5. Which folder do I pick?
+
+When Export Issue asks where to export, **pick the project folder — not an
+Exports folder.** The tool builds the structure underneath whatever you give it:
+
+```
+C:\Projects\12345\          <-- PICK THIS
+├── Exports\                  <-- created for you
+│   ├── PDF\  DWG\  IFC\  RVT\
+└── Archive\                  <-- created for you
+    └── 26-07-31_Archive\
+```
+
+Picking the `Exports` folder itself gives you `Exports\Exports\PDF`. The tool
+now spots this and offers to use the parent, but it is worth knowing.
+
+**Use the same folder every time for a given project.** Archiving looks for
+`<folder>\Exports` and writes `<folder>\Archive`. Point it somewhere different
+on the next run and it will report "nothing superseded" while the superseded
+files sit exactly where you left them.
+
+---
+
+## 6. Export Issue
 
 Once the probe results are in, `Export Issue` becomes usable. It is currently
 **dry-run only** — it will show you every file it would create and write

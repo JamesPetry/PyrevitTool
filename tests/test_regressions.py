@@ -149,3 +149,51 @@ class TestUnnameableSheetsAreNeverWritten(object):
         assert operation["args"]["dest_path"] is None
         assert any(r["rule_id"] == "R8" for r in verdict["results"])
         assert check.approved_operations(changeset, verdict) == []
+
+
+class TestExportRootMisselection(object):
+    """Picking Exports/ rather than its parent produced Exports/Exports/PDF.
+
+    Untidy is the least of it: Archive looks for <root>/Exports and writes
+    <root>/Archive, so an inconsistent root between runs makes it report
+    "nothing superseded" while superseded files sit in plain sight. The folder
+    picker opens on the folder just exported into, which makes the mistake
+    easy.
+    """
+
+    @staticmethod
+    def gate_source():
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "HDR.extension", "lib", "aecflow", "gates", "g1_scope.py")
+        with open(path) as handle:
+            return handle.read()
+
+    def test_the_guard_exists_and_is_wired_into_the_picker(self):
+        source = self.gate_source()
+        assert "def resolve_root" in source
+        assert "resolve_root(picked or default_root)" in source
+
+    def test_the_guard_keys_off_the_naming_convention(self):
+        """Hard-coding "Exports" here would drift if the convention changed."""
+        source = self.gate_source()
+        assert 'naming.CONVENTION["export_dir"]' in source
+        assert 'naming.CONVENTION["archive_dir"]' in source
+
+    def test_the_archive_button_uses_the_same_guard(self):
+        path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "HDR.extension", "HDR.tab", "Issue.panel",
+            "Archive Superseded.pushbutton", "script.py")
+        with open(path) as handle:
+            source = handle.read()
+        assert "g1_scope.resolve_root" in source
+
+    def test_structural_folder_names_are_what_the_tool_creates(self):
+        """The guard is only correct if these are the folders being made."""
+        from aecflow import naming
+        assert naming.CONVENTION["export_dir"] == "Exports"
+        assert naming.CONVENTION["archive_dir"] == "Archive"
+        built = naming.export_path(os.path.join("P:", os.sep, "proj"),
+                                   "12345-A101-RevP04.pdf")
+        assert os.path.join("proj", "Exports", "PDF") in built

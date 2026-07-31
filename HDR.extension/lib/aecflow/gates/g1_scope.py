@@ -10,6 +10,11 @@ import os
 
 from pyrevit import forms
 
+from aecflow import naming
+
+CONVENTION_EXPORT_DIR = naming.CONVENTION["export_dir"]
+CONVENTION_ARCHIVE_DIR = naming.CONVENTION["archive_dir"]
+
 FORMATS = ("pdf", "dwg", "ifc", "rvt")
 FORMAT_LABELS = {
     "pdf": "PDF (one file per sheet)",
@@ -23,6 +28,41 @@ DEFAULT_FORMATS = ("pdf",)
 # tidies Exports straight after the export, so the folder is left holding only
 # the current revision of each sheet.
 ARCHIVE_OPTION = "Archive superseded files afterwards (tidy Exports)"
+
+
+def resolve_root(picked):
+    """Catch the user picking Exports/ or Archive/ instead of their parent.
+
+    The tool builds Exports/ and Archive/ underneath whatever root it is given,
+    so selecting the Exports folder itself produces Exports/Exports/PDF. Worse
+    than untidy: Archive looks for <root>/Exports and writes <root>/Archive, so
+    an inconsistent root between runs means it finds nothing to archive and
+    reports "nothing superseded" while superseded files sit right there.
+
+    Easy mistake -- the folder picker opens showing exactly the folder you just
+    exported into.
+    """
+    if not picked:
+        return picked
+
+    root = os.path.abspath(picked)
+    name = os.path.basename(root.rstrip(os.sep))
+    structural = (CONVENTION_EXPORT_DIR, CONVENTION_ARCHIVE_DIR)
+
+    if name not in structural:
+        return root
+
+    parent = os.path.dirname(root)
+    use_parent = forms.alert(
+        "You picked the {0} folder itself.\n\n"
+        "The tool creates Exports and Archive underneath the project folder, "
+        "so this would give you:\n"
+        "    {1}\n\n"
+        "Use the parent folder instead?\n"
+        "    {2}".format(name, os.path.join(root, "Exports", "PDF"), parent),
+        title="Check the folder", ok=False, yes=True, no=True,
+    )
+    return parent if use_parent else root
 
 
 def prompt(doc, available_series, default_root, series_fallback=None):
@@ -78,7 +118,7 @@ def prompt(doc, available_series, default_root, series_fallback=None):
     except Exception:
         picked = None
 
-    export_root = picked or default_root
+    export_root = resolve_root(picked or default_root)
     if not export_root:
         return None
 
