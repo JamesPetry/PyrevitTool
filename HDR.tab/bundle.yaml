@@ -1,0 +1,7 @@
+title: HDR
+
+# Panels run left to right in this order. Without it pyRevit falls back to
+# alphabetical, which puts the dev diagnostics ahead of the actual workflow.
+layout:
+  - Issue
+  - Dev

@@ -1,0 +1,7 @@
+title: Issue
+
+# Workflow order, not alphabetical order -- you export first and archive
+# afterwards, and the ribbon should say so. Alphabetical put Archive first.
+layout:
+  - Export Issue
+  - Archive Superseded

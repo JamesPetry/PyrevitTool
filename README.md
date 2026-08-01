@@ -50,6 +50,19 @@ Nothing shipped so far modifies your model. The two buttons above read it and
 write to disk; only the unbuilt `Close Out` half would change the model itself
 (along with the `Seed Revisions` dev tool, which is for scratch models).
 
+The ribbon says the same thing without being read. Every icon is the same sheet
+with a different badge, and the badge colour is the risk:
+
+| | Badge | Means |
+|---|---|---|
+| `Export Issue` | Blue arrow into a tray | Writes new files, touches nothing that exists |
+| `Archive Superseded` | Amber carton | Moves existing files, never deletes |
+| `Probe Export` | Teal magnifier | Reads only |
+| `Seed Revisions` | Red exclamation | Changes your model |
+
+Silhouettes differ as well as colour, so the set still reads if you cannot
+separate the hues. Dark-ribbon variants ship alongside for Revit 2024+.
+
 ---
 
 ## Architecture
@@ -89,15 +102,18 @@ level rather than under a `HDR.extension/` folder.
 PyrevitTool/                       # cloned as HDR.extension/
 ├── extension.json                 # manifest for the Extensions Manager
 ├── HDR.tab/
+│   ├── bundle.yaml                # panel order: Issue before Dev
 │   ├── Issue.panel/               # the workflow
+│   │   ├── bundle.yaml            # button order: Export before Archive
 │   │   ├── Export Issue.pushbutton/
 │   │   │   ├── script.py          # thin: 5 stage calls + 3 gates, no logic
-│   │   │   ├── bundle.yaml
-│   │   │   └── icon.png
+│   │   │   ├── bundle.yaml        # title, tooltip, help_url, Revit floor
+│   │   │   ├── icon.png
+│   │   │   └── icon.dark.png      # Revit 2024+ dark ribbon
 │   │   └── Archive Superseded.pushbutton/
 │   └── Dev.panel/                 # diagnostics, not the workflow
 │       ├── Probe Export.pushbutton/       # read-only
-│       └── Seed Revisions.pushbutton/     # MODIFIES THE MODEL, scratch only
+│       └── Seed Revisions.pushbutton/     # modifies the model, scratch only
 └── lib/                           # pyRevit auto-adds this to sys.path
     └── aecflow/
         ├── contracts.py           # Snapshot, Intent, Op, ChangeSet, Verdict

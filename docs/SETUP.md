@@ -82,13 +82,13 @@ An **HDR** tab should appear with two panels and four buttons:
 |---|---|---|
 | Issue | Export Issue | The real tool. Writes files once you approve the review table. |
 | Issue | Archive Superseded | Moves superseded exports into a dated Archive folder. Never deletes. |
-| Dev tools | Probe Export | Read-only diagnostic, described below. Safe on any model. |
-| Dev tools | Seed Revisions | **Modifies the model.** Sample and scratch models only. |
+| Dev Tools | Probe Export | Read-only diagnostic, described below. Safe on any model. |
+| Dev Tools | Seed Revisions | **Modifies the model.** Sample and scratch models only. |
 
 Everything on the Issue panel only ever *reads* your model — the files it
 writes go to disk, not into the project. `Seed Revisions` is the single
-exception in the suite, which is why it sits on the Dev panel behind its own
-confirmation dialog.
+exception in the suite, which is why it sits on the Dev Tools panel behind its
+own confirmation dialog, and carries the only red icon on the tab.
 
 ---
 

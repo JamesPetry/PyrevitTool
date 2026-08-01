@@ -1,8 +1,13 @@
 title: Export\nIssue
-tooltip: >-
-  Create the export folder tree and write PDF / DWG / IFC / detached RVT for
-  every sheet on the chosen issue revision, named to the HDR convention.
-  Dry-run by default -- nothing is written until you approve the review table.
+tooltip: |-
+  Exports every sheet on the chosen issue revision, named to the HDR
+  convention and filed under Exports/.
+
+  Each sheet goes out at its own current revision, as PDF, DWG, IFC and a
+  detached RVT. A review table lists every file before anything is written,
+  and nothing it has flagged is included unless you ask for it.
+
+  Only PDF has been verified against a live model -- see KNOWN-LIMITATIONS.
 author: HDR
-highlight: new
+help_url: https://github.com/JamesPetry/PyrevitTool/blob/main/docs/SETUP.md#6-export-issue
 min_revit_version: 2025
