@@ -1,4 +1,6 @@
-title: Export\nIssue
+title: |-
+  Export
+  Issue
 tooltip: |-
   Exports every sheet on the chosen issue revision, named to the HDR
   convention and filed under Exports/.

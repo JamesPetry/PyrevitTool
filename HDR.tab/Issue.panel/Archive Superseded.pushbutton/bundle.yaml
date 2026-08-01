@@ -1,4 +1,6 @@
-title: Archive\nSuperseded
+title: |-
+  Archive
+  Superseded
 tooltip: |-
   Leaves Exports/ holding only the current revision of each sheet, moving
   everything it supersedes into a dated Archive folder.
