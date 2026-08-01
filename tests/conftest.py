@@ -6,11 +6,12 @@ import sys
 
 import pytest
 
+# The repo root IS the .extension folder, so lib/ sits beside tests/ -- the
+# same path pyRevit puts on sys.path when it loads the extension.
 sys.path.insert(
     0,
     os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "HDR.extension",
         "lib",
     ),
 )

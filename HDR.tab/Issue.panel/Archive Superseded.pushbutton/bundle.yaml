@@ -6,3 +6,4 @@ tooltip: >-
   are MOVED, never deleted, and only files matching the HDR naming convention
   are touched. Nothing moves until you approve the review table.
 author: HDR
+min_revit_version: 2025

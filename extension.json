@@ -1,0 +1,13 @@
+{
+    "builtin": "False",
+    "type": "extension",
+    "rocket_mode_compatible": "True",
+    "name": "HDR",
+    "description": "Issue-time sheet export and archive for Revit 2025, built on the AECFlow pipeline. Exports every sheet on a chosen revision to PDF/DWG/IFC/RVT under the HDR naming convention, then moves superseded files into a dated archive. Read docs/KNOWN-LIMITATIONS.md before relying on it.",
+    "author": "HDR",
+    "author_profile": "https://github.com/JamesPetry",
+    "url": "https://github.com/JamesPetry/PyrevitTool.git",
+    "website": "https://github.com/JamesPetry/PyrevitTool",
+    "image": "",
+    "dependencies": []
+}

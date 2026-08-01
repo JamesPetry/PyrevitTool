@@ -1,0 +1,5 @@
+title: Dev tools
+tooltip: >-
+  Diagnostics and sample-model setup, not part of the issue workflow. Probe
+  Export is read-only. Seed Revisions MODIFIES THE MODEL and is for scratch
+  models only.

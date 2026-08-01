@@ -1,0 +1,10 @@
+title: Seed\nRevisions
+tooltip: >-
+  WARNING -- THIS MODIFIES YOUR MODEL, and it is the only button in this suite
+  that does. Creates two test revisions and assigns them across the first few
+  sheets, deliberately leaving some on the older revision and one with none, so
+  Export Issue has a realistic mix to work with. FOR SAMPLE AND SCRATCH MODELS
+  ONLY -- never run it on live project work. It asks for confirmation first,
+  and one Ctrl+Z undoes the whole thing.
+author: HDR
+min_revit_version: 2025

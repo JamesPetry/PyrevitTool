@@ -302,7 +302,7 @@ class TestArchiveAfterExportWiring(object):
         by design. Read the file instead."""
         path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "HDR.extension", "lib", "aecflow", "gates", name)
+            "lib", "aecflow", "gates", name)
         with open(path) as handle:
             return handle.read()
 

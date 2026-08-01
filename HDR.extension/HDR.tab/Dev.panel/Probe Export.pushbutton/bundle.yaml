@@ -1,7 +1,0 @@
-title: Probe\nExport
-tooltip: >-
-  Diagnostic. Reads the model and writes a few test PDFs to a temp folder to
-  confirm how Revit names exported files, whether this project uses Sheet
-  Collections, and how long per-sheet export takes. Does not modify the model
-  and does not touch project folders. Send the output to James.
-author: HDR

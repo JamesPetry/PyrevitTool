@@ -246,7 +246,7 @@ class TestInvariants(object):
 
     LIB = os.path.join(
         os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "HDR.extension", "lib", "aecflow",
+        "lib", "aecflow",
     )
 
     @staticmethod

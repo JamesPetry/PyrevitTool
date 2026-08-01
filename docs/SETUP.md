@@ -24,40 +24,71 @@ Troubleshooting below.
 
 ---
 
-## 2. Get this repository onto your machine
+## 2. Install the extension
 
-Either clone it:
+**The quick way.** pyRevit ships a command line tool that does the download and
+the wiring in one step. Open a Command Prompt and run:
 
 ```
-git clone https://github.com/JamesPetry/PyrevitTool.git
+pyrevit extend ui HDR https://github.com/JamesPetry/PyrevitTool.git
+pyrevit reload
 ```
 
-…or download the ZIP from GitHub (**Code → Download ZIP**) and extract it.
+That is the whole of steps 2 and 3 — skip to step 4. It also means
+`pyrevit extensions update HDR` picks up later changes.
 
-Note the folder path. It needs to be somewhere that stays put — `C:\Dev\` or
-your Documents folder, not Downloads or a temp folder.
+> If `pyrevit` is not a recognised command, the CLI was not added to your PATH.
+> Use the manual route below, or reinstall pyRevit with the CLI option ticked.
 
-The folder you want is the one **containing** `HDR.extension`, for example
-`C:\Dev\PyrevitTool`.
+**The manual way.** Clone the repository — and note the folder name, it
+matters:
+
+```
+git clone https://github.com/JamesPetry/PyrevitTool.git HDR.extension
+```
+
+…or download the ZIP from GitHub (**Code → Download ZIP**), extract it, and
+**rename the extracted folder to `HDR.extension`**. pyRevit identifies
+extensions by that `.extension` suffix and will not see the folder without it.
+
+Put it somewhere that stays put — `C:\Dev\` or your Documents folder, not
+Downloads or a temp folder. You should end up with something like:
+
+```
+C:\Dev\                     <-- this is the path pyRevit needs
+└── HDR.extension\
+    ├── HDR.tab\
+    ├── lib\
+    └── extension.json
+```
 
 ---
 
 ## 3. Point pyRevit at the extension
 
+Manual route only — the CLI in step 2 already did this.
+
 In Revit:
 
 1. **pyRevit tab → Settings**
 2. Scroll to **Custom Extension Directories**
-3. Click **+** and select the folder from step 2 — `C:\Dev\PyrevitTool`
-   (the folder that *contains* `HDR.extension`, not `HDR.extension` itself)
+3. Click **+** and select the **parent** folder — `C:\Dev`, the folder that
+   *contains* `HDR.extension`, not `HDR.extension` itself
 4. **Save Settings and Reload**
 
-An **HDR** tab should appear with two panels:
+An **HDR** tab should appear with two panels and four buttons:
 
 | Panel | Button | What it is |
 |---|---|---|
-| Issue | Export Issue | The real tool. Currently dry-run only. |
-| Dev | Probe Export | The diagnostic described below. |
+| Issue | Export Issue | The real tool. Writes files once you approve the review table. |
+| Issue | Archive Superseded | Moves superseded exports into a dated Archive folder. Never deletes. |
+| Dev tools | Probe Export | Read-only diagnostic, described below. Safe on any model. |
+| Dev tools | Seed Revisions | **Modifies the model.** Sample and scratch models only. |
+
+Everything on the Issue panel only ever *reads* your model — the files it
+writes go to disk, not into the project. `Seed Revisions` is the single
+exception in the suite, which is why it sits on the Dev panel behind its own
+confirmation dialog.
 
 ---
 
@@ -115,9 +146,21 @@ files sit exactly where you left them.
 
 ## 6. Export Issue
 
-Once the probe results are in, `Export Issue` becomes usable. It is currently
-**dry-run only** — it will show you every file it would create and write
-nothing. That default flips once the probe confirms export behaviour.
+`Export Issue` writes real files. Nothing is written until you approve the
+review table it shows you first — that table is the last point at which you can
+back out, and rows it has flagged are never included unless you ask for them.
+
+Two things to know before your first real run:
+
+- **PDF is the only format proven against a live model.** DWG, IFC and detached
+  RVT are implemented but have never produced a file. Try them on a test
+  project before an issue deadline depends on them.
+- **Exports are not undoable with Ctrl+Z.** The tool never touches the model,
+  so Revit has nothing to undo. To reverse a run, delete the export folder —
+  the summary screen names it.
+
+[`KNOWN-LIMITATIONS.md`](KNOWN-LIMITATIONS.md) is the full list, and it is
+worth ten minutes before you rely on this.
 
 ---
 
@@ -128,9 +171,18 @@ Check **Add-Ins → Add-in Manager**, or look for a "third-party add-in" securit
 prompt on startup and allow it. A reinstall with Revit fully closed fixes most
 cases.
 
-**No HDR tab after adding the directory.** Almost always the wrong folder
-level. pyRevit wants the folder *containing* `HDR.extension`. If you selected
-`HDR.extension` itself, go back one level. Then **Save Settings and Reload**.
+**No HDR tab after adding the directory.** Two causes, both common.
+
+*Wrong folder level.* pyRevit wants the folder *containing* `HDR.extension`.
+If you selected `HDR.extension` itself, go back one level. Then **Save Settings
+and Reload**.
+
+*Folder not named `HDR.extension`.* A plain `git clone` or a GitHub ZIP gives
+you a folder called `PyrevitTool` or `PyrevitTool-main`. pyRevit finds
+extensions by the `.extension` suffix and ignores anything else. Rename the
+folder to `HDR.extension` and reload. You should see `HDR.tab` and `lib`
+directly inside it — if instead you see another folder before those, you picked
+one level too shallow.
 
 **"Probe Export" errors immediately.** Send the error text — it is as useful as
 a successful run. The most likely cause is an API difference between Revit

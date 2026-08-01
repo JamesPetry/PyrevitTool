@@ -3,12 +3,21 @@
 A pyRevit extension for HDR, built on the AECFlow pipeline architecture.
 **Revit 2025.**
 
-> **Status: M1 built, unverified against Revit.** All five pipeline stages,
-> both rule sets, four op executors and three gates are implemented, with 86
-> tests passing without Revit. Nothing has yet been run inside Revit — the
-> export executors are written from the API documentation and are **unproven
-> until the spike in [ADR-003](docs/adr/ADR-003-one-export-call-per-file.md)
-> has run.** `DRY_RUN = True` is the default until then.
+> **Status: working end to end on a sample model.** All five pipeline stages,
+> both rule sets, four op executors and three gates are implemented, with 155
+> tests passing without Revit. **PDF export is verified against a live Revit
+> 2025 model**, including exact filenames and per-sheet revision selection —
+> the question [ADR-003](docs/adr/ADR-003-one-export-call-per-file.md) was
+> opened to answer.
+>
+> **DWG, IFC and detached RVT export have never produced a file**, nothing has
+> been run on a workshared model or over a network path, and nobody but the
+> author has installed it. `DRY_RUN = False` — the buttons write for real once
+> you approve the review table.
+>
+> **Read [`docs/KNOWN-LIMITATIONS.md`](docs/KNOWN-LIMITATIONS.md) before you
+> point this at project work.** It is the honest inventory of what has and has
+> not been proven.
 
 ---
 
@@ -28,13 +37,18 @@ PROJECT/
     └── 26-07-22_Archive/
 ```
 
-Ryann's nine actions are split across **two** buttons rather than one, so the
+Ryann's nine actions are split across separate buttons rather than one, so the
 reversible half can ship without waiting on the destructive half:
 
-| Button | Actions | Risk | Milestone |
+| Button | Actions | Risk | State |
 |---|---|---|---|
-| `Export Issue` | 1–4 — folders, PDF, DWG, IFC, detached RVT | Writes new files only | **M1–M2** |
-| `Archive & Close` | 5–9 — archive, purge, audit, save-as, close | Moves files, mutates the model | M3 |
+| `Export Issue` | 1–4 — folders, PDF, DWG, IFC, detached RVT | Writes new files only | **Shipped** |
+| `Archive Superseded` | 5 — supersede into a dated Archive folder | Moves files, never deletes | **Shipped** |
+| `Close Out` | 6–9 — purge, audit, save-as, close | Mutates the model | Not built |
+
+Nothing shipped so far modifies your model. The two buttons above read it and
+write to disk; only the unbuilt `Close Out` half would change the model itself
+(along with the `Seed Revisions` dev tool, which is for scratch models).
 
 ---
 
@@ -67,13 +81,23 @@ Fixed architectural context:
 
 ## Layout
 
+**The repository root is the extension.** pyRevit's installer clones a repo
+straight into `<name>.extension/`, so `HDR.tab/` and `lib/` sit at the top
+level rather than under a `HDR.extension/` folder.
+
 ```
-HDR.extension/
+PyrevitTool/                       # cloned as HDR.extension/
+├── extension.json                 # manifest for the Extensions Manager
 ├── HDR.tab/
-│   └── Issue.panel/
-│       └── Export Issue.pushbutton/
-│           ├── script.py          # thin: 5 stage calls + 3 gates, no logic
-│           └── bundle.yaml
+│   ├── Issue.panel/               # the workflow
+│   │   ├── Export Issue.pushbutton/
+│   │   │   ├── script.py          # thin: 5 stage calls + 3 gates, no logic
+│   │   │   ├── bundle.yaml
+│   │   │   └── icon.png
+│   │   └── Archive Superseded.pushbutton/
+│   └── Dev.panel/                 # diagnostics, not the workflow
+│       ├── Probe Export.pushbutton/       # read-only
+│       └── Seed Revisions.pushbutton/     # MODIFIES THE MODEL, scratch only
 └── lib/                           # pyRevit auto-adds this to sys.path
     └── aecflow/
         ├── contracts.py           # Snapshot, Intent, Op, ChangeSet, Verdict
@@ -90,9 +114,15 @@ HDR.extension/
 docs/
 ├── 00-aecflow-pipeline-context.md
 ├── 01-design-issue-export.md
+├── KNOWN-LIMITATIONS.md
+├── SETUP.md
 └── adr/
 tests/
+tools/                             # maintenance scripts, not shipped logic
 ```
+
+pyRevit only looks at folders whose names carry a bundle postfix, so `docs/`,
+`tests/` and `tools/` come along in the clone and are ignored at load time.
 
 `HDR.tab` is branding; `lib/aecflow/` is client-neutral architecture.
 
@@ -104,10 +134,14 @@ The naming convention and the pipeline contracts run without Revit — that is
 the point of keeping them pure.
 
 ```bash
-python -m pytest tests/ -q
+python -m pytest tests/ -q      # 155 passed
 ```
 
-Golden-file tests over captured Snapshot fixtures follow in M1:
+Only Extract and Commit need Revit, and both are thin.
+
+Still outstanding: golden-file tests over captured Snapshot fixtures, which
+would pin the whole chain against a recorded real model rather than a
+hand-built one.
 
 ```
 tests/fixtures/<case>/snapshot.json → propose → intent.json
@@ -115,21 +149,51 @@ tests/fixtures/<case>/snapshot.json → propose → intent.json
                                     → check   → verdict.json
 ```
 
-Only Extract and Commit need Revit, and both are thin.
-
 ---
 
-## Installation (once M1 lands)
+## Installation
+
+Requires **pyRevit 4.8+** and **Revit 2025**. No network access, no third-party
+Python packages.
+
+**With the pyRevit CLI** — clones the repo and keeps it updatable with
+`pyrevit extensions update HDR`:
 
 ```
-pyrevit extend ui HDR <repo-url> --dest="%APPDATA%\pyRevit\Extensions"
+pyrevit extend ui HDR https://github.com/JamesPetry/PyrevitTool.git
 pyrevit reload
 ```
+
+The extension name `HDR` sets the clone folder — pyRevit creates
+`%APPDATA%\pyRevit\Extensions\HDR.extension\`, which is why this repository's
+root *is* the extension.
+
+**Without the CLI** — clone into a correctly named folder, then point pyRevit
+at its parent:
+
+```
+git clone https://github.com/JamesPetry/PyrevitTool.git HDR.extension
+```
+
+Then **pyRevit → Settings → Custom Extension Directories → +**, select the
+folder *containing* `HDR.extension`, and **Save Settings and Reload**.
+
+Step-by-step, for anyone who has not run Python in Revit before:
+[`docs/SETUP.md`](docs/SETUP.md).
 
 ---
 
 ## Open questions
 
-Eight items need Ryann's answer before M1 closes — the two blocking ones are
-what "sheet creation" means (files vs. `ViewSheet` elements) and how the issue
-revision selects sheets. See §12 of the design doc.
+See §12 of the design doc. How the issue revision selects sheets is settled —
+each sheet exports at its own current revision, confirmed by Ryann and verified
+on a live run. What "sheet creation" means (files vs. `ViewSheet` elements) is
+still open, as is whether Sheet Collections will be populated or whether the
+sheet-number prefix fallback is the intended grouping (Q9).
+
+---
+
+## Licence
+
+Proprietary — copyright HDR, all rights reserved. Being able to read this
+repository is not permission to use it; see [`LICENSE`](LICENSE).

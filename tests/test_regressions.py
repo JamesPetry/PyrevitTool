@@ -165,7 +165,7 @@ class TestExportRootMisselection(object):
     def gate_source():
         path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "HDR.extension", "lib", "aecflow", "gates", "g1_scope.py")
+            "lib", "aecflow", "gates", "g1_scope.py")
         with open(path) as handle:
             return handle.read()
 
@@ -183,7 +183,7 @@ class TestExportRootMisselection(object):
     def test_the_archive_button_uses_the_same_guard(self):
         path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "HDR.extension", "HDR.tab", "Issue.panel",
+            "HDR.tab", "Issue.panel",
             "Archive Superseded.pushbutton", "script.py")
         with open(path) as handle:
             source = handle.read()

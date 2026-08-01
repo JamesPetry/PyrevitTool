@@ -1,7 +1,0 @@
-title: Seed\nRevisions
-tooltip: >-
-  MODIFIES THE MODEL. Creates two test revisions and assigns them across the
-  first few sheets, deliberately leaving some on the older revision and one
-  with none, so Export Issue has a realistic mix to work with. For sample and
-  scratch models only. One Ctrl+Z undoes it.
-author: HDR
