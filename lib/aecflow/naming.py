@@ -5,7 +5,7 @@ Every naming decision the tool makes lives here, so changing the convention is
 one edit rather than a search across the codebase. Pure functions over plain
 strings -- no Revit API, no filesystem access, fully unit testable.
 
-Conventions are drawn from the structure supplied by Ryann:
+Conventions are drawn from the structure supplied by the client:
 
     Exports/PDF/12345-A101-RevP04.pdf
     Exports/IFC/12345_Model_RevP04.ifc

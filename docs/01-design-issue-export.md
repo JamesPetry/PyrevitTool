@@ -9,12 +9,12 @@
 
 ## 1. What we are building first
 
-Leo's instruction was explicit: deliver the specific script Ryann asked for — automated
-sheet export and batch printing with correct folder and naming conventions — before any
-work on consolidating third-party pyRevit scripts into an HDR suite.
+The project lead's instruction was explicit: deliver the specific script the client asked
+for — automated sheet export and batch printing with correct folder and naming conventions
+— before any work on consolidating third-party pyRevit scripts into an HDR suite.
 
 This document designs that script, and only that script, against the four-phase structure
-Ryann supplied. Everything about the wider HDR suite is deferred to §11.
+the client supplied. Everything about the wider HDR suite is deferred to §11.
 
 **Job to be done (practitioner's voice):**
 > "At issue time, put every sheet in this series out at its current revision, into the right
@@ -24,7 +24,7 @@ Ryann supplied. Everything about the wider HDR suite is deferred to §11.
 
 ## 2. The single most important recommendation: split it into two tools
 
-Ryann's nine actions span two fundamentally different risk profiles:
+The client's nine actions span two fundamentally different risk profiles:
 
 | Actions | What they touch | Reversible? |
 |---|---|---|
@@ -42,7 +42,7 @@ context caps a first release at six op kinds; nine actions needs eight or more).
 
 They share `lib/aecflow/` entirely: same Snapshot, same contracts, same Check engine, same
 audit record. This is a packaging decision, not an architectural one — and it means we have
-something real in front of Ryann next week instead of something half-finished across nine
+something real in front of the client next week instead of something half-finished across nine
 actions.
 
 **The rest of this document specifies `Export Issue`.** `Archive & Close` is sketched in §10.
@@ -51,7 +51,7 @@ actions.
 
 ## 3. Pipeline instantiation
 
-Mapping Ryann's phases onto the AECFlow stage model:
+Mapping the client's phases onto the AECFlow stage model:
 
 ```
 EXTRACT [D]          PROPOSE [D]           RESOLVE [D]        CHECK [D]         COMMIT [D]
@@ -78,7 +78,7 @@ Consequences worth stating at the meeting:
 - Invariants 1 and 2 (no unvalidated probabilistic output, no LLM inside a transaction) are
   **satisfied trivially** — there is no model call anywhere in the tool.
 - The tool needs **no network access at all**. This matters directly for the HDR security
-  constraints Ryann raised (§8).
+  constraints the client raised (§8).
 - Every stage is golden-file testable with zero Revit dependency.
 - The seam stays open. If a later version wants "export the sheets for the coordination
   issue" from a natural-language request, PROPOSE is swapped and nothing else moves.
@@ -129,7 +129,7 @@ ElementIds appear nowhere outside Resolve.
 
 ### 5.1 Templates
 
-From Ryann's example structure:
+From the client's example structure:
 
 | Artefact | Example | Template |
 |---|---|---|
@@ -139,7 +139,7 @@ From Ryann's example structure:
 | Detached RVT | `12345_Model_RevP04.rvt` | `{project_number}_Model_Rev{revision}.rvt` |
 | Archive folder | `26-07-22_Archive` | `{YY}-{MM}-{DD}_Archive` |
 
-**Open question for Ryann (Q3):** sheet names use hyphens, model names use underscores. If
+**Open question for the client (Q3):** sheet names use hyphens, model names use underscores. If
 that is deliberate we will keep it; if it is incidental we should pick one now, because
 `Archive & Close` has to parse these filenames back into `(sheet_number, revision)` to
 decide what to archive, and a stable separator makes that parse reliable.
@@ -157,7 +157,7 @@ so the convention is one edit away from changing per office or per project.
     └── 26-07-22_Archive/
 ```
 
-**Open question for Ryann (Q4):** where is `<export_root>`? Three candidates — sibling of
+**Open question for the client (Q4):** where is `<export_root>`? Three candidates — sibling of
 the `.rvt`, a fixed network location per project, or read from a project parameter. The tool
 supports all three; we need to know the default. Recommend a project parameter with a
 sibling-of-RVT fallback, so the convention travels with the model.
@@ -245,7 +245,7 @@ into force in `Archive & Close`, which does open transactions.
 Revit 2022+ exposes `Document.Export(folder, name, PDFExportOptions)`. This replaces the old
 `PrintManager` + virtual-PDF-printer approach entirely: no printer driver dependency, no
 per-machine print setup, no modal print dialogs, and paper size derived from the sheet's
-titleblock. Ryann's earlier EXE-based solutions existed largely to work around
+titleblock. The client's earlier EXE-based solutions existed largely to work around
 `PrintManager`; on 2025 that workaround is unnecessary.
 
 **This is the single biggest technical win from standardising on 2025** and worth stating
@@ -257,11 +257,12 @@ plainly in the meeting.
 run under IronPython 2.7 as well — no f-strings, no `dataclasses`, no annotations in
 signatures, `.format()` throughout.
 
-The reason is Ryann's security point. If HDR IT will not approve the CPython 3 engine in the
-SOE, a tool that depends on it is dead. This tool needs **zero third-party packages and zero
-network access** — only the Revit API, `os`, and `shutil` — so IronPython is a genuine
-fallback rather than a theoretical one. The cost of staying compatible is a coding standard;
-the benefit is that an environment veto does not restart the project. See `ADR-002`.
+The reason is the client's security point. If HDR IT will not approve the CPython 3
+engine in the SOE, a tool that depends on it is dead. This tool needs **zero
+third-party packages and zero network access** — only the Revit API, `os`, and
+`shutil` — so IronPython is a genuine fallback rather than a theoretical one. The
+cost of staying compatible is a coding standard; the benefit is that an environment
+veto does not restart the project. See `ADR-002`.
 
 ### 8.3 Execution pattern: modal, blocking, cancellable
 
@@ -287,7 +288,7 @@ writes to a new path and never touches central.
 | Milestone | Contents | For |
 |---|---|---|
 | **M0** | This design agreed. Repo scaffold, contracts, naming module, op vocabulary frozen. | Today's meeting |
-| **M1** | `Export Issue` — dry-run end to end, PDF export live, G1/G2/G3, audit record, golden fixtures from a real HDR model. | **Ryann's review next week** |
+| **M1** | `Export Issue` — dry-run end to end, PDF export live, G1/G2/G3, audit record, golden fixtures from a real HDR model. | **Client review next week** |
 | **M2** | DWG, IFC, detached RVT. Config for naming/root. | +1 week |
 | **M3** | `Archive & Close` — actions 5–9. | +2–3 weeks |
 | **M4** | HDR suite consolidation begins (§11). | After M3 |
@@ -296,9 +297,9 @@ M1 is the deliverable in the follow-up task. Getting PDF working end-to-end with
 gate demonstrates the whole architecture; the remaining three formats are the same shape with
 different options objects.
 
-**What we need from Ryann to hit M1:** answers to Q1 and Q2 (§12), and a test model — ideally
-a workshared one with a real revision history and deep network path, since that is what R4 and
-the worksharing guards are for.
+**What we need from the client to hit M1:** answers to Q1 and Q2 (§12), and a test
+model — ideally a workshared one with a real revision history and a deep network
+path, since that is what R4 and the worksharing guards are for.
 
 ---
 
@@ -331,7 +332,7 @@ user. Recommend it be opt-in at G1 and default off.
 
 ## 11. The wider HDR suite (deferred)
 
-Ryann's longer-term vision — consolidating EF Tools, PI Architect, and other open-source
+The client's longer-term vision — consolidating EF Tools, PI Architect, and other open-source
 pyRevit scripts into a single HDR collection — is real work but explicitly sequenced after
 this tool. Two structural decisions made now that make it cheaper later:
 
@@ -347,7 +348,7 @@ this tool. Two structural decisions made now that make it cheaper later:
 ## 12. Open questions — meeting agenda
 
 **Q1 — "Sheet creation": files or elements?** ⚠ *Highest impact — still open*
-The meeting notes say "sheet creation and printing", but the phase structure Ryann supplied
+The meeting notes say "sheet creation and printing", but the phase structure the client supplied
 contains no sheet-creation action — every one of the nine actions is export, archive, or
 housekeeping. Two readings:
  - (a) "sheet creation" means creating the exported files. The phase structure supports this,

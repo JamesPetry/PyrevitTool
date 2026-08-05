@@ -9,7 +9,7 @@ departs from the brief, that is stated in §3 rather than hidden.
 | Tag | Source |
 |---|---|
 | `MN` | Meeting notes, HDR PyRevit Tool Suite kickoff, 2026-07-27 |
-| `RS` | Ryann's phase structure and folder layout, supplied 2026-07-27 |
+| `CS` | The client's phase structure and folder layout, supplied 2026-07-27 |
 | `PC` | [`docs/00-aecflow-pipeline-context.md`](00-aecflow-pipeline-context.md), cited by line |
 
 ---
@@ -20,14 +20,14 @@ departs from the brief, that is stated in §3 rather than hidden.
 
 > `MN` — "delivery of an initial Python script for sheet creation and printing"
 
-> `MN` — "Leo instructed James to focus first on delivering the specific Python script
-> requested by Ryann"
+> `MN` — "[The project lead] instructed [the author] to focus first on delivering the
+> specific Python script requested by [the client]"
 
 The whole tool. Everything else in this document is subordinate to it.
 
 ### 1.2 Creates the folder tree automatically
 
-> `RS` — "Action 1 - Create Export Folder"
+> `CS` — "Action 1 - Create Export Folder"
 
 > `MN` — "ongoing testing of Python scripts for tasks like automatic folder creation and
 > batch PDF printing"
@@ -40,24 +40,24 @@ own right — see §4 of the design doc.
 > `MN` — "automating sheet creation and batch printing with **proper folder and naming
 > conventions**"
 
-> `RS` — `12345-A101-RevP04.pdf`, `12345_Model_RevP04.ifc`, `26-07-22_Archive`
+> `CS` — `12345-A101-RevP04.pdf`, `12345_Model_RevP04.ifc`, `26-07-22_Archive`
 
 Lives in `lib/aecflow/naming.py` as a single config dict. Unit tested, including against
 Revit's own illegal-character set.
 
 ### 1.4 Exports PDF, DWG, IFC and a detached RVT
 
-> `RS` — "Action 3 - IFC Export"
+> `CS` — "Action 3 - IFC Export"
 
-> `RS` — "Action 4 - Detached Revit Model and save Revit"
+> `CS` — "Action 4 - Detached Revit Model and save Revit"
 
-> `RS` — folder tree showing `PDF`, `DWG`, `IFC`, `RVT`
+> `CS` — folder tree showing `PDF`, `DWG`, `IFC`, `RVT`
 
 Four op kinds, one per format.
 
 ### 1.5 Reads project information to build names
 
-> `RS` — "Read Project Information │ Project Number │ Project Name │ Current Revision │
+> `CS` — "Read Project Information │ Project Number │ Project Name │ Current Revision │
 > File Location"
 
 Maps one-to-one onto the `ModelSnapshot` fields in `contracts.py`. This line of the brief is
@@ -66,7 +66,7 @@ effectively the Extract specification.
 ### 1.6 Revit 2025
 
 > `MN` — "The team discussed which Revit version to use for development, ultimately deciding
-> on version 2025, with James confirming access and readiness to proceed."
+> on version 2025, with [the author] confirming access and readiness to proceed."
 
 ### 1.7 `Document.Export`, not `PrintManager`
 
@@ -176,16 +176,16 @@ Four departures. Each is a decision that could reasonably be reversed.
 
 ### 3.1 The two-tool split is not in the brief
 
-`RS` presents a single linear run:
+`CS` presents a single linear run:
 
-> `RS` — "START ├─ Read Project Information ... ├─ Purge Unused ├─ Save-As Audited Model
+> `CS` — "START ├─ Read Project Information ... ├─ Purge Unused ├─ Save-As Audited Model
 > └─ Close Model END"
 
 Nothing in the source asks for this to be split. The split is inferred from two things: the
 risk asymmetry between actions 1–4 (create files) and 5–9 (move files, mutate the model),
 and the six-op cap at `PC:249`, which nine actions cannot meet in one tool.
 
-**This is the decision most likely to be rejected, and the one to raise first.** If Ryann
+**This is the decision most likely to be rejected, and the one to raise first.** If the client
 wants a single button, the fallback is one tool with an op kind per format and a Purge that
 is opt-in and defaulted off — at the cost of the export half not shipping until the
 destructive half is trusted.
@@ -215,20 +215,20 @@ recorded as one.
 ### 3.4 The brief specifies both answers to Q2
 
 The revision-selection rule cannot be read unambiguously from the source, because two lines
-of `RS` disagree.
+of `CS` disagree.
 
-> `RS` — "Action 2 - Export Sheets with **Latest Revision**"
+> `CS` — "Action 2 - Export Sheets with **Latest Revision**"
 
 reads as *each sheet at its own latest revision*. But:
 
-> `RS` — "12345-A101-Rev**P04**.pdf" and "12345-A102-Rev**P04**.pdf"
+> `CS` — "12345-A101-Rev**P04**.pdf" and "12345-A102-Rev**P04**.pdf"
 
 shows every sheet carrying the *same* revision, which is issue-based selection. On any
 project where sheets have diverged, these produce different file sets.
 
 Q2 existed because the brief genuinely specifies both and the code must pick one.
 
-**Resolved 2026-07-27 in Ryann's favour, against our recommendation.** The operative line is
+**Resolved 2026-07-27 in the client's favour, against our recommendation.** The operative line is
 "Export Sheets with **Latest Revision**" — per-sheet latest. The uniform `RevP04` filenames
 were an artefact of the example, not a specification. A **sheet series** scopes the package
 instead, so the selection is "every sheet in this series, each at its own current revision".
@@ -249,5 +249,5 @@ listed here for completeness:
 - **Check rules R4 and R5** (path length, filename legality). Not requested. Added because
   HDR network paths are deep and Revit sheet numbers legally contain characters Windows
   forbids in filenames.
-- **The audit record.** `PC:75` requires it architecturally; no line of `MN` or `RS` asks for
+- **The audit record.** `PC:75` requires it architecturally; no line of `MN` or `CS` asks for
   it.

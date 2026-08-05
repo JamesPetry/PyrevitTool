@@ -12,7 +12,7 @@ None of those apply here. `Export Issue` has no probabilistic stage, so it
 makes no network calls and needs no third-party packages — only the Revit API,
 `os`, `shutil`, `re` and `json`.
 
-Against that, Ryann raised security constraints in the HDR environment.
+Against that, the client raised security constraints in the HDR environment.
 Approving a new Python engine in a locked-down SOE is an IT process with an
 uncertain outcome and no timeline we control. A tool that hard-depends on
 CPython 3 is blocked entirely if that approval does not come.

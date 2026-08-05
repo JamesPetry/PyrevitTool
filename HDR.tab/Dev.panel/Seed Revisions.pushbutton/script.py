@@ -22,7 +22,7 @@ WHAT IT CREATES
         - one sheet left with NO revision, which must warn under rule R8
 
     That mix is the point. A model where every sheet is on the same revision
-    cannot demonstrate the rule Ryann confirmed.
+    cannot demonstrate the rule the client confirmed.
 
 UNDO
     The whole thing is wrapped in a TransactionGroup and assimilated, so a

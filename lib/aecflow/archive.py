@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """PROPOSE for archiving -- work out which exported files are superseded.
 
-Implements the Archive half of Ryann's structure: Exports/ holds only what is
-current, everything it supersedes moves into a dated Archive/ folder.
+Implements the Archive half of the client's structure: Exports/ holds only
+what is current, everything it supersedes moves into a dated Archive/ folder.
 
     Exports/PDF/12345-A101-RevP04.pdf     <- current, stays
     Archive/26-07-22_Archive/

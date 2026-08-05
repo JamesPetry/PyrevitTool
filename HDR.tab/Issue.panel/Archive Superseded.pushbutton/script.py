@@ -2,9 +2,9 @@
 # ! python3
 """Archive Superseded -- leave only the current issue in Exports.
 
-Implements the Archive half of Ryann's folder structure. After exporting, run
-this and Exports/ is left holding exactly what is current, with everything it
-supersedes moved into a dated Archive folder:
+Implements the Archive half of the client's folder structure. After exporting,
+run this and Exports/ is left holding exactly what is current, with everything
+it supersedes moved into a dated Archive folder:
 
     Exports/PDF/12345-A101-RevP04.pdf      <- stays
     Archive/26-07-22_Archive/

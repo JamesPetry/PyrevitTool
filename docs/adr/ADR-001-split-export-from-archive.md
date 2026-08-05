@@ -4,7 +4,7 @@
 
 ## Context
 
-Ryann's structure defines nine actions across four phases, presented as one
+The client's structure defines nine actions across four phases, presented as one
 automation run. Delivered as a single button, actions 1–4 (create folders,
 export PDF/DWG/IFC, save detached RVT) cannot be released until actions 5–9
 (archive, purge, audit, save-as, close) are trusted — despite having a
@@ -31,7 +31,7 @@ Check engine, and audit record.
 
 ## Consequences
 
-**Good.** Something real is in front of Ryann at M1 rather than nine
+**Good.** Something real is in front of the client at M1 rather than nine
 half-finished actions. The destructive half gets its own review cycle. Check
 rule R2 (`Export Issue` never overwrites) becomes enforceable, which means the
 export tool structurally cannot destroy a previous issue.

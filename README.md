@@ -37,8 +37,8 @@ PROJECT/
     └── 26-07-22_Archive/
 ```
 
-Ryann's nine actions are split across separate buttons rather than one, so the
-reversible half can ship without waiting on the destructive half:
+The client's nine actions are split across separate buttons rather than one, so
+the reversible half can ship without waiting on the destructive half:
 
 | Button | Actions | Risk | State |
 |---|---|---|---|
@@ -202,10 +202,10 @@ Step-by-step, for anyone who has not run Python in Revit before:
 ## Open questions
 
 See §12 of the design doc. How the issue revision selects sheets is settled —
-each sheet exports at its own current revision, confirmed by Ryann and verified
-on a live run. What "sheet creation" means (files vs. `ViewSheet` elements) is
-still open, as is whether Sheet Collections will be populated or whether the
-sheet-number prefix fallback is the intended grouping (Q9).
+each sheet exports at its own current revision, confirmed by the client and
+verified on a live run. What "sheet creation" means (files vs. `ViewSheet`
+elements) is still open, as is whether Sheet Collections will be populated or
+whether the sheet-number prefix fallback is the intended grouping (Q9).
 
 ---
 

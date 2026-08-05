@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Propose -> Resolve -> Check, end to end, without Revit.
 
-These are the tests that verify the selection rule Ryann confirmed on
+These are the tests that verify the selection rule the client confirmed on
 2026-07-27: every sheet in the series, each at its OWN current revision.
 """
 
